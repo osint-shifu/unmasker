@@ -35,6 +35,12 @@ which RFC 2606 reserves for the purpose.
 | [`pdf/text-on-an-image.pdf`](pdf/text-on-an-image.md) | LibreOffice 24.2, ImageMagick | white text on a picture | nothing — and a note saying it could not be judged |
 | [`pdf/libreoffice-writer-pdf-comments.pdf`](pdf/libreoffice-writer-pdf-comments.md) | LibreOffice 24.2 | a two-line board minute | two comments attached to the page and not part of it |
 
+Every specimen that hides text *on the page* is also found by `--ocr`, which
+renders the page and reads the picture back and knows none of the mechanisms —
+and every control stays silent under both. Two independent methods agreeing on
+fourteen files is the strongest thing this directory has to say, and neither
+could arrange it for the other.
+
 The first two are failed redactions. The next two must not be reported, and for
 different reasons: one was redacted correctly, the other has nothing to search.
 The partial-bars file holds the detector honest about *how much* a bar covers.

@@ -216,3 +216,45 @@ def test_a_missing_binary_is_a_remark_and_not_a_crash(tmp_path):
     # what is wrong instead of quoting an errno at somebody.
     assert "not on PATH" in remark
     assert "OCR engine" in remark
+
+
+# --------------------------------------------------------------------------
+# two independent methods, agreeing
+# --------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("specimen", "hidden"),
+    [
+        ("libreoffice-writer-black-bars.pdf", "Wanda Testowa-Przyklad"),
+        ("libreoffice-writer-partial-bars.pdf", "ul. Przykladowa"),
+        ("libreoffice-writer-image-over-text.pdf", "Ludmila Wieczorek-Test"),
+        ("chrome-transparent-text.pdf", "one tenth opacity"),
+        ("libreoffice-writer-hidden-in-plain-sight.pdf", "crop box"),
+    ],
+)
+def test_the_two_methods_agree_on_every_hiding_specimen(specimen, hidden):
+    """The strongest assertion in this suite, because nothing links the two.
+
+    One side knows filled paths, render modes, opacity, colour and position.
+    The other renders the page and reads a picture, and knows none of that. On
+    five files hiding text five different ways they name the same words - which
+    is not something either could arrange for the other.
+    """
+    from unmasker.pdf.detectors import detect
+
+    page, (words, _) = read_back(specimen)
+    by_mechanism = " ".join(f.machine_reads for f in detect(page))
+    by_picture = reads(unrendered_text(page, words))
+    assert hidden in by_mechanism, "the mechanism-specific detectors should find it"
+    assert hidden.split()[0] in by_picture, "and so should reading the page back"
+
+
+def test_they_agree_on_the_controls_too():
+    """Silence has to agree as well, or one of them is guessing."""
+    from unmasker.pdf.detectors import detect
+
+    for name in ("libreoffice-writer-properly-redacted.pdf", "text-on-an-image.pdf"):
+        page, (words, _) = read_back(name)
+        assert [f for f in detect(page) if f.detector == "covered-text"] == [], name
+        assert unrendered_text(page, words) == [], name
