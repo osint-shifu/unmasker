@@ -291,6 +291,59 @@ def test_the_partial_specimen_leaves_the_last_word_of_each_value_legible():
 
 
 # --------------------------------------------------------------------------
+# text painted at no opacity
+# --------------------------------------------------------------------------
+
+
+def transparent(text: str, alpha: float, **kw) -> TextRun:
+    gs = glyphs(text, **kw)
+    return TextRun(
+        text=text,
+        glyphs=gs,
+        bbox=Rect(gs[0].bbox.x0, gs[0].bbox.y0, gs[-1].bbox.x1, gs[-1].bbox.y1),
+        font="F1",
+        size=10,
+        fill=BLACK,
+        alpha=alpha,
+        order=0,
+    )
+
+
+def test_text_painted_at_zero_alpha_is_invisible():
+    """`color: transparent` is one CSS declaration. Chrome does not change the
+    render mode for it - it sets `/ca 0` and paints normally - so a detector
+    that looked only at `Tr` finds nothing, and one that looked only at colour
+    finds black on white and calls it legible."""
+    (found,) = invisible_text(page(transparent("RESERVE PRICE", 0.0)))
+    assert found.detector == "invisible-text"
+    assert found.basis is Basis.DIRECT
+    assert found.machine_reads == "RESERVE PRICE"
+    assert "opacity" in found.summary or "opaque" in found.summary
+
+
+def test_barely_visible_text_is_reported_but_only_as_circumstantial():
+    """A tenth of an opacity may still be readable on a good screen, and it is
+    also how a watermark is set. The observation is certain; whether the gap
+    exists is not."""
+    (found,) = invisible_text(page(transparent("FAINT", 0.1)))
+    assert found.basis is Basis.CIRCUMSTANTIAL
+    assert "0.1" in found.summary
+
+
+def test_ordinary_opaque_text_is_not_reported():
+    assert invisible_text(page(transparent("VISIBLE", 1.0))) == []
+
+
+def test_text_at_zero_alpha_is_not_also_reported_as_covered():
+    """It is not under anything. It was never painted."""
+    assert covered_text(page(transparent("HIDDEN", 0.0), bar(95, 195, 300, 215, order=1))) == []
+
+
+def test_text_at_zero_alpha_is_not_also_a_colour_finding():
+    assert low_contrast_text(page(transparent("HIDDEN", 0.0))) == []
+
+
+# --------------------------------------------------------------------------
 # text in the colour of what is behind it
 # --------------------------------------------------------------------------
 
@@ -524,5 +577,39 @@ def test_that_specimen_has_nothing_covered_and_nothing_invisible():
 def test_the_bar_specimens_have_no_colour_or_position_findings(specimen):
     """The new detectors must stay silent on the files the old ones handle."""
     interpreted = interpret_page(page_of(specimen))
+    assert low_contrast_text(interpreted) == []
+    assert off_page_text(interpreted) == []
+
+
+# --------------------------------------------------------------------------
+# the transparent-text specimen
+# --------------------------------------------------------------------------
+
+TRANSPARENT_SPECIMEN = "chrome-transparent-text.pdf"
+
+
+def test_the_transparent_line_of_the_specimen_is_reported():
+    found = invisible_text(interpret_page(page_of(TRANSPARENT_SPECIMEN)))
+    reads = " ".join(f.machine_reads for f in found)
+    assert "reserve price is 4.2 million" in reads
+
+
+def test_the_faded_line_of_the_specimen_is_reported_as_circumstantial():
+    found = invisible_text(interpret_page(page_of(TRANSPARENT_SPECIMEN)))
+    faded = [f for f in found if "one tenth opacity" in f.machine_reads]
+    assert faded and all(f.basis is Basis.CIRCUMSTANTIAL for f in faded)
+
+
+def test_the_ordinary_lines_of_that_specimen_are_not_reported():
+    found = invisible_text(interpret_page(page_of(TRANSPARENT_SPECIMEN)))
+    reads = " ".join(f.machine_reads for f in found)
+    assert "must not be reported" not in reads
+    assert "Only two of them" not in reads
+
+
+def test_nothing_is_covered_or_low_contrast_in_that_specimen():
+    """It hides by opacity alone. Every other detector must stay silent."""
+    interpreted = interpret_page(page_of(TRANSPARENT_SPECIMEN))
+    assert covered_text(interpreted) == []
     assert low_contrast_text(interpreted) == []
     assert off_page_text(interpreted) == []

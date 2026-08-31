@@ -179,15 +179,28 @@ class TextRun:
     order: int = 0
     """Position in the painting order; see `Shape.order`."""
 
+    alpha: float = 1.0
+    """The constant alpha the glyphs were painted with.
+
+    Text at zero alpha is laid out, shaped and painted exactly like any other
+    and is completely absent from the page. Chrome does this for
+    `color: transparent`: it does *not* change the render mode, it sets
+    `/ca 0` in an ExtGState and paints normally. A detector reading only `Tr`
+    finds nothing, and one reading only colour finds black on white."""
+
     widths_estimated: bool = False
     """True when the font declared no widths, so every extent here is a
     default rather than a measurement. The report has to say so."""
 
     @property
     def is_invisible(self) -> bool:
-        """Render modes 3 and 7 paint nothing. Mode 3 is a real technique: the
-        text is in the file, selectable and searchable, and not on the screen."""
-        return self.render_mode in (3, 7)
+        """Whether these glyphs put anything on the page at all.
+
+        Two ways to put nothing there: a render mode that paints neither fill
+        nor stroke, or paint that is not opaque. Both leave the text
+        selectable, searchable and absent.
+        """
+        return self.render_mode in (3, 7) or self.alpha <= 0.01
 
     @property
     def visible_bbox(self) -> Rect:
@@ -212,6 +225,15 @@ class _State:
     stroke: Colour | None = BLACK
     fill_alpha: float = 1.0
     stroke_alpha: float = 1.0
+    group_alpha: float = 1.0
+    """The alpha of every transparency group enclosing this content, multiplied
+    together.
+
+    A transparency group is composited into its parent using the alpha in force
+    when it was painted, and inside the group the alpha starts again at 1. So a
+    run's own `ca` is not what reaches the page: Chrome renders
+    `opacity: 0.1` as a group at `/ca 0.1` whose contents are fully opaque, and
+    reading only the inner alpha would call that text perfectly visible."""
     fill_space: str | None = "DeviceGray"
     stroke_space: str | None = "DeviceGray"
     # Text parameters are part of the graphics state and are saved by q/Q.
@@ -392,6 +414,8 @@ class _Interpreter:
                     stroke=state.stroke,
                     clip=state.clip,
                     order=self.next_order(),
+                    alpha=(state.stroke_alpha if state.render_mode in (1, 5) else state.fill_alpha)
+                    * state.group_alpha,
                     widths_estimated=font is None or font.widths_are_estimated,
                 )
             )
@@ -589,7 +613,7 @@ class _Interpreter:
                     bbox=bbox,
                     colour=state.fill,
                     clip=state.clip,
-                    alpha=state.fill_alpha,
+                    alpha=state.fill_alpha * state.group_alpha,
                     even_odd=FILL_OPS[op],
                     order=self.next_order(),
                 )
@@ -603,7 +627,7 @@ class _Interpreter:
                     bbox=bbox,
                     colour=state.stroke,
                     clip=state.clip,
-                    alpha=state.stroke_alpha,
+                    alpha=state.stroke_alpha * state.group_alpha,
                     order=self.next_order(),
                 )
             )
@@ -618,7 +642,7 @@ class _Interpreter:
             bbox=Rect.from_points(corners),
             colour=None,
             clip=state.clip,
-            alpha=state.fill_alpha,
+            alpha=state.fill_alpha * state.group_alpha,
             order=self.next_order(),
         )
 
@@ -669,6 +693,15 @@ class _Interpreter:
             return
 
         inner = state.copy()
+
+        group = _entry(xobject, "Group")
+        if group is not None and _plain(_entry(group, "S")) == "Transparency":
+            # The group is composited with the alpha in force now, and starts
+            # again at 1 inside. Carrying the outer alpha in unchanged would
+            # apply it twice; ignoring it would lose it entirely.
+            inner.group_alpha = state.group_alpha * state.fill_alpha
+            inner.fill_alpha = inner.stroke_alpha = 1.0
+
         matrix = _numbers(_entry(xobject, "Matrix") or [])
         if matrix and len(matrix) >= 6:
             inner.ctm = Matrix(*matrix[:6]).then(inner.ctm)

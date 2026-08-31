@@ -27,6 +27,7 @@ which RFC 2606 reserves for the purpose.
 | [`docx/libreoffice-writer-metadata-leak.docx`](docx/libreoffice-writer-metadata-leak.md) | LibreOffice 24.2 Writer | one anonymous sentence | two people, a client, a codename and a home directory |
 | [`pdf/libreoffice-writer-metadata-leak.pdf`](pdf/libreoffice-writer-metadata-leak.md) | LibreOffice 24.2 Writer | the same sentence | the same leak, minus what the PDF export drops |
 | [`pdf/xmp-survives-the-scrub.pdf`](pdf/xmp-survives-the-scrub.md) | LibreOffice 24.2, then exiftool 12.76 | an Info dictionary that looks cleaned | an XMP packet that still holds all of it |
+| [`pdf/chrome-transparent-text.pdf`](pdf/chrome-transparent-text.md) | Skia/PDF m152 (headless Chrome) | two paragraphs and a blank gap | two more paragraphs, painted at no opacity |
 
 The first two are failed redactions. The next two must not be reported, and for
 different reasons: one was redacted correctly, the other has nothing to search.

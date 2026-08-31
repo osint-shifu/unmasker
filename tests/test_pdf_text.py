@@ -12,7 +12,7 @@ and until this file existed nothing checked it end to end.
 """
 
 import pytest
-from conftest import Stub, page_of
+from conftest import Stub, StubStream, page_of
 
 from unmasker.pdf.geometry import Rect
 from unmasker.pdf.interpreter import interpret_page, interpret_stream
@@ -230,3 +230,81 @@ def _glyphs_spelling(runs, value):
 def _inside(glyph: Rect, bar: Rect, share: float = 0.6) -> bool:
     overlap = glyph.intersect(bar)
     return not overlap.is_empty and overlap.area >= glyph.area * share
+
+
+# --------------------------------------------------------------------------
+# transparency groups
+# --------------------------------------------------------------------------
+
+
+def test_a_transparency_group_composites_its_contents_at_the_outer_alpha():
+    """`opacity: 0.1` in CSS becomes a group painted at `/ca 0.1` whose own
+    contents are fully opaque. Reading only the inner alpha calls that text
+    perfectly visible."""
+    resources = Stub(
+        ExtGState=Stub(GS=Stub(ca=0.1)),
+        XObject=Stub(
+            Fm=StubStream(
+                b"/GS1 gs BT /F1 10 Tf 10 10 Td (A) Tj ET",
+                Subtype="/Form",
+                BBox=[0, 0, 200, 200],
+                Group=Stub(S="/Transparency"),
+                Resources=Stub(
+                    Font=Stub(F1=Stub(Subtype="/TrueType", FirstChar=0, Widths=[500] * 256)),
+                    ExtGState=Stub(GS1=Stub(ca=1.0)),
+                ),
+            )
+        ),
+    )
+    (run,) = runs_of("/GS gs /Fm Do", resources=resources)
+    assert run.alpha == pytest.approx(0.1)
+
+
+def test_the_group_alpha_is_not_applied_twice():
+    """The group is composited at the outer alpha and starts again at 1 inside.
+    Carrying the outer alpha in unchanged would square it, and 0.1 squared is
+    below the threshold that means `paints nothing at all`."""
+    resources = Stub(
+        ExtGState=Stub(GS=Stub(ca=0.1)),
+        XObject=Stub(
+            Fm=StubStream(
+                b"BT /F1 10 Tf 10 10 Td (A) Tj ET",
+                Subtype="/Form",
+                BBox=[0, 0, 200, 200],
+                Group=Stub(S="/Transparency"),
+                Resources=Stub(
+                    Font=Stub(F1=Stub(Subtype="/TrueType", FirstChar=0, Widths=[500] * 256))
+                ),
+            )
+        ),
+    )
+    (run,) = runs_of("/GS gs /Fm Do", resources=resources)
+    assert run.alpha == pytest.approx(0.1)
+    assert not run.is_invisible
+
+
+def test_a_form_that_is_not_a_transparency_group_carries_the_alpha_through():
+    resources = Stub(
+        ExtGState=Stub(GS=Stub(ca=0.0)),
+        XObject=Stub(
+            Fm=StubStream(
+                b"BT /F1 10 Tf 10 10 Td (A) Tj ET",
+                Subtype="/Form",
+                BBox=[0, 0, 200, 200],
+                Resources=Stub(
+                    Font=Stub(F1=Stub(Subtype="/TrueType", FirstChar=0, Widths=[500] * 256))
+                ),
+            )
+        ),
+    )
+    (run,) = runs_of("/GS gs /Fm Do", resources=resources)
+    assert run.alpha == pytest.approx(0.0)
+
+
+def test_stroke_only_text_carries_the_stroke_alpha():
+    resources = Stub(
+        ExtGState=Stub(GS=Stub(CA=0.0, ca=1.0)),
+        Font=Stub(F1=Stub(Subtype="/TrueType", FirstChar=0, Widths=[500] * 256)),
+    )
+    (run,) = runs_of("/GS gs BT /F1 10 Tf 1 Tr 10 10 Td (A) Tj ET", resources=resources)
+    assert run.alpha == pytest.approx(0.0)

@@ -50,6 +50,12 @@ COVERAGE = 0.55
 
 # Render modes that put ink on the page. 3 is invisible, 7 is clip-only.
 PAINTING_MODES = frozenset({0, 1, 2, 4, 5, 6})
+
+# Alpha at or below which paint puts nothing perceptible on the page, and the
+# alpha below which it is faint enough that a reader may miss it. The second is
+# also how a watermark is set, so it is reported with a weaker basis.
+INVISIBLE_ALPHA = 0.01
+FAINT_ALPHA = 0.15
 STROKE_ONLY_MODES = frozenset({1, 5})
 
 # How close two colours have to be before the text stops being readable. Chosen
@@ -107,7 +113,7 @@ def _lines(page: InterpretedPage) -> list[list[tuple[Glyph, TextRun]]]:
     """
     buckets: dict[int, list[tuple[Glyph, TextRun]]] = {}
     for run in page.texts:
-        if run.render_mode not in PAINTING_MODES:
+        if run.render_mode not in PAINTING_MODES or run.is_invisible:
             continue
         for glyph in run.glyphs:
             buckets.setdefault(round(glyph.bbox.y0), []).append((glyph, run))
@@ -270,18 +276,32 @@ def invisible_text(page: InterpretedPage) -> list[Finding]:
     """
     findings = []
     for run in page.texts:
-        if run.render_mode in PAINTING_MODES:
+        unpainted = run.render_mode not in PAINTING_MODES
+        clear = run.alpha <= INVISIBLE_ALPHA
+        faint = not unpainted and not clear and run.alpha <= FAINT_ALPHA
+        if not (unpainted or clear or faint):
             continue
         if not run.text.strip():
             continue
+
+        if unpainted:
+            why = f"drawn in render mode {run.render_mode}, which paints neither fill nor stroke"
+        elif clear:
+            why = (
+                f"painted at an opacity of {run.alpha:g}, which puts nothing on "
+                "the page; the glyphs are laid out and shaped as any others"
+            )
+        else:
+            why = (
+                f"painted at an opacity of {run.alpha:g}, faint enough that a "
+                "reader may not see it - and also how a watermark is set"
+            )
+
         findings.append(
             Finding(
                 detector="invisible-text",
-                basis=Basis.DIRECT,
-                summary=(
-                    f"{len(run.text)} characters drawn in render mode "
-                    f"{run.render_mode}, which paints nothing"
-                ),
+                basis=Basis.CIRCUMSTANTIAL if faint else Basis.DIRECT,
+                summary=f"{len(run.text)} characters {why}",
                 human_sees="",
                 machine_reads=run.text,
                 location=Location(page=page.number),
@@ -353,7 +373,7 @@ def low_contrast_text(page: InterpretedPage) -> list[Finding]:
     """
     findings: list[Finding] = []
     for run in page.texts:
-        if run.render_mode not in PAINTING_MODES:
+        if run.render_mode not in PAINTING_MODES or run.is_invisible:
             continue  # invisible_text's finding, not this one
         ink = _ink(run)
         if ink is None or not run.text.strip():
