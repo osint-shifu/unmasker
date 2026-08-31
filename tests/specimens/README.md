@@ -85,5 +85,8 @@ Named here so their absence is not mistaken for coverage:
   never agree about everything — the PDF specimens proved that twice.
 - **`w:moveFrom` / `w:moveTo` from a real producer.** LibreOffice does not emit
   move tracking; the reader handles it and only a synthetic test exercises it.
-- **The rest of tier 1 and tier 3.** No specimen yet for invisible render mode
-  (`3 Tr`), text in the colour of its background, or text off the page.
+- **The two detectors with no specimen at all.** `invisible-text` (render mode
+  `3 Tr`) and `text-under-image` are covered by unit tests on hand-built pages
+  and by nothing a producer wrote. Every other detector fires on a committed
+  file; these two are the exception, and the exception is the risk — it is
+  exactly the shape of the bug that started this project.
