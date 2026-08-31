@@ -50,9 +50,15 @@ unmasker leaked.pdf
 > applications that have touched the file, and every place the two halves
 > disagree about what the file is.
 >
-> Not yet: OCR, and the containers `filetrail` reads that this does not. A
-> clean run means the detectors that exist found nothing, and the report says
-> that rather than calling the document clean.
+> And with `--ocr`, the check that knows no technique at all: render each page,
+> read the picture back, and compare. Words the file holds and the page does
+> not show are found without the tool knowing *how* they are hidden - and a
+> page with no text layer can finally be read, which is the one finding here
+> where the columns swap.
+>
+> Not yet: the containers `filetrail` reads that this does not. A clean run
+> means the detectors that exist found nothing, and the report says that rather
+> than calling the document clean.
 >
 > See [`HANDOFF.md`](HANDOFF.md) for what this is, what was decided and why, and
 > what has been verified against real files.

@@ -71,6 +71,11 @@ class Extraction:
     cannot carry tracked changes", the second is "it can and does not".
     """
 
+    source: object | None = None
+    """The file this came from. Kept because reading a page back means
+    rendering it again, and a renderer needs the file rather than the reading
+    of it."""
+
     metadata: object | None = None
     """A `Metadata` record for readers that can see one, else None.
 

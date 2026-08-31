@@ -162,7 +162,19 @@ def test_a_page_with_no_text_layer_says_what_is_painted_on_it_instead():
     note = " ".join(got.remarks)
     assert "no text layer" in note
     assert "image" in note
-    assert "OCR" in note
+    assert "--ocr" in note, "the note has to name the way to read it"
+
+
+def test_the_note_only_names_a_flag_that_would_work(monkeypatch):
+    """CLAUDE.md: every command the tool prints must run in the shell that
+    printed it. filetrail printed `filetrail --help` at somebody who had not
+    installed it, and the screen was disproved by the first thing they tried."""
+    import unmasker.pdf.rendered as rendered
+
+    monkeypatch.setattr(rendered.shutil, "which", lambda name: None)
+    note = " ".join(read(SPECIMENS / "flattened-to-image.pdf").remarks)
+    assert "neither is here" in note
+    assert "gs" in note and "tesseract" in note
 
 
 def test_a_plain_file_has_nothing_drawn(tmp_path):

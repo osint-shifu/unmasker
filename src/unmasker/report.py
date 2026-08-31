@@ -79,14 +79,17 @@ def _field(style: Style, label: str, value: str, label_width: int) -> list[str]:
     if not value:
         # An empty reading is a statement, not a gap in the output: for
         # white-on-white text a human sees nothing at all, and a blank column
-        # reads as a rendering fault rather than as the finding.
+        # reads as a rendering fault rather than as the finding. Which nothing
+        # it is depends on the column - text absent from the page and text
+        # absent from the file are different findings.
+        nothing = "nothing in the file" if label.startswith("machine") else "nothing on the page"
         return [
             MARGIN
             + gutter
             + " "
             + style.ink(label.ljust(label_width), FAINT)
             + "  "
-            + style.ink("nothing on the page", FAINT)
+            + style.ink(nothing, FAINT)
         ]
 
     lines = textwrap.wrap(
@@ -147,7 +150,7 @@ def _entry(style: Style, finding: Finding, label_width: int) -> list[str]:
 def _searched(extraction: Extraction) -> str:
     """What was actually looked at. Never a claim that outruns the reading."""
     if not extraction.has_text:
-        return "nothing to search: this file yielded no text"
+        return "this file has no text layer to search"
     pages = [u.page for u in extraction.units if u.page is not None]
     with_text = [u for u in extraction.units if u.text.strip()]
     if pages:

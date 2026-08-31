@@ -29,6 +29,8 @@ from . import __version__
 from .findings import Finding
 from .metadata.detectors import detect as detect_metadata
 from .pdf.detectors import detect as detect_drawn
+from .pdf.detectors import unextractable_text, unrendered_text
+from .pdf.rendered import read_page_back, tools_available
 from .readers import UnreadableFile, read
 from .report import Style, render
 from .revisions import detect as detect_revisions
@@ -36,7 +38,7 @@ from .text.invisible import scan_text
 from .theme import glyphs, resolve_depth
 
 
-def collect(extraction) -> list[Finding]:
+def collect(extraction, ocr: bool = False) -> list[Finding]:
     """Run every text detector over every unit, tagging findings with the page.
 
     Detectors are additive and none outranks another: a unit with a bidi
@@ -62,6 +64,18 @@ def collect(extraction) -> list[Finding]:
     # Tier 4, for readers that can see what an application agreed not to show.
     if extraction.revisions is not None:
         found.extend(detect_revisions(extraction.revisions))
+
+    # Reading each page back costs a render and an OCR pass - seconds a page -
+    # and needs two external binaries, which is why HANDOFF.md decision 4 kept
+    # it out and why it is still off unless asked for.
+    if ocr and extraction.source is not None:
+        for painted in extraction.drawn:
+            words, problems = read_page_back(extraction.source, painted.number, painted.box)
+            extraction = dataclasses.replace(
+                extraction, remarks=extraction.remarks + tuple(problems)
+            )
+            found.extend(unrendered_text(painted, words))
+            found.extend(unextractable_text(painted, words))
 
     # Metadata is only a finding where it says something the document does not,
     # so the detector is given the document's own text to compare against.
@@ -99,6 +113,16 @@ def build_parser() -> argparse.ArgumentParser:
         metavar="N",
         help="wrap the report at N columns instead of measuring the terminal",
     )
+    parser.add_argument(
+        "--ocr",
+        action="store_true",
+        help=(
+            "render each page and read it back, to find words the file holds "
+            "that the page does not show - and the reverse. Needs ghostscript "
+            "and tesseract, and costs seconds a page, which is why it is not "
+            "the default"
+        ),
+    )
     parser.add_argument("--version", action="version", version=f"unmasker {__version__}")
     return parser
 
@@ -112,7 +136,16 @@ def main(argv: list[str] | None = None) -> int:
         print(f"unmasker: {exc}", file=sys.stderr)
         return 2
 
-    findings = collect(extraction)
+    if args.ocr:
+        present, missing = tools_available()
+        if not present:
+            print(
+                "unmasker: --ocr needs " + " and ".join(missing) + " on PATH",
+                file=sys.stderr,
+            )
+            return 2
+
+    findings = collect(extraction, ocr=args.ocr)
 
     if args.json:
         json.dump(

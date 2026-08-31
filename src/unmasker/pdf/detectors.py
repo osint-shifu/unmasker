@@ -42,6 +42,7 @@ from __future__ import annotations
 from ..findings import Basis, Finding, Location
 from .geometry import WHITE, Colour, Rect
 from .interpreter import Glyph, InterpretedPage, Shape, TextRun
+from .rendered import CONFIDENT, UNREAD_RUN, ReadWord
 
 # How much of a glyph a shape must cover before the glyph counts as hidden.
 # A rule drawn along a line of text clips its descenders; that is a rule, not a
@@ -361,6 +362,149 @@ def _joined(entries: list[tuple[Glyph, TextRun]]) -> str:
         out.append(glyph.char)
         previous = glyph
     return "".join(out)
+
+
+def _normalise(text: str) -> str:
+    return "".join(c for c in text.lower() if c.isalnum())
+
+
+def _words_of(page: InterpretedPage, painted_only: bool = True) -> list[list[Glyph]]:
+    """Glyphs grouped into whitespace-delimited words.
+
+    `painted_only` decides which question is being asked. For *is this in the
+    file and not on the page*, only painted text counts - text a render mode
+    never draws is legitimately absent from the picture and `invisible_text`
+    has already said so. For *is this on the page and not in the file*, every
+    run counts, painted or not: an invisible OCR layer is still text in the
+    file, and `pdftotext` reads it straight out.
+    """
+    out: list[list[Glyph]] = []
+    for run in page.texts:
+        if painted_only and (run.render_mode not in PAINTING_MODES or run.is_invisible):
+            continue
+        current: list[Glyph] = []
+        for glyph in run.glyphs:
+            if glyph.char.strip():
+                current.append(glyph)
+            elif current:
+                out.append(current)
+                current = []
+        if current:
+            out.append(current)
+    return out
+
+
+def _box_of(glyphs: list[Glyph]) -> Rect:
+    return Rect.from_points(
+        [(g.bbox.x0, g.bbox.y0) for g in glyphs] + [(g.bbox.x1, g.bbox.y1) for g in glyphs]
+    )
+
+
+def unrendered_text(page: InterpretedPage, read: list[ReadWord]) -> list[Finding]:
+    """Words the file holds that the picture of the page does not show.
+
+    This is the one detector that knows no technique. It does not care whether
+    the words are under a bar, painted at no opacity, in the colour of the
+    paper or off the edge of it - only that they are in the file and not on the
+    page. A method nobody here has thought of still fails that question, which
+    is the only kind of check that can catch one.
+
+    It also cannot be certain, ever. OCR is wrong constantly and its being
+    wrong looks exactly like concealment, which is why a run has to be
+    `UNREAD_RUN` words long before it is reported and why the basis is always
+    circumstantial. The threshold is measured rather than chosen: see
+    `rendered.py`.
+    """
+    if not read:
+        return []
+
+    findings: list[Finding] = []
+    span: list[list[Glyph]] = []
+
+    def flush() -> None:
+        if len(span) < UNREAD_RUN:
+            span.clear()
+            return
+        text = " ".join("".join(g.char for g in word) for word in span)
+        box = _box_of([g for word in span for g in word])
+        findings.append(
+            Finding(
+                detector="unrendered-text",
+                basis=Basis.CIRCUMSTANTIAL,
+                summary=(
+                    f"{len(span)} consecutive words at x {box.x0:.1f}-{box.x1:.1f}, "
+                    f"y {box.y0:.1f}-{box.y1:.1f} are in the file and were not read "
+                    "back off a rendering of the page. Nothing here knows how they "
+                    "are hidden, only that they are - and OCR failing to read text "
+                    "looks the same as text not being there"
+                ),
+                human_sees="",
+                machine_reads=text,
+                location=Location(page=page.number),
+            )
+        )
+        span.clear()
+
+    for word in _words_of(page):
+        wanted = _normalise("".join(g.char for g in word))
+        if not wanted:
+            continue
+        box = _box_of(word)
+        nearby = "".join(_normalise(w.text) for w in read if not box.intersect(w.bbox).is_empty)
+        if wanted in nearby:
+            flush()
+        else:
+            span.append(word)
+    flush()
+    return findings
+
+
+def unextractable_text(page: InterpretedPage, read: list[ReadWord]) -> list[Finding]:
+    """Words the page shows that the file does not hold.
+
+    The gap the other way round, and the question this project has declined to
+    answer since its first specimen: a page with no text layer could be read
+    only by rendering it, and now it can be.
+
+    Only confident readings count. Claiming the page shows something the file
+    lacks on the strength of a low-confidence guess would be inventing the
+    evidence rather than reading it.
+    """
+    if not read:
+        return []
+
+    boxes = [_box_of(word) for word in _words_of(page, painted_only=False)]
+    orphans = [
+        w
+        for w in read
+        if w.confidence >= CONFIDENT
+        and _normalise(w.text)
+        and not any(not w.bbox.intersect(b).is_empty for b in boxes)
+    ]
+    if len(orphans) < UNREAD_RUN:
+        return []
+
+    text = " ".join(w.text for w in orphans)
+    box = Rect.from_points(
+        [(w.bbox.x0, w.bbox.y0) for w in orphans] + [(w.bbox.x1, w.bbox.y1) for w in orphans]
+    )
+    return [
+        Finding(
+            detector="unextractable-text",
+            basis=Basis.CIRCUMSTANTIAL,
+            summary=(
+                f"{len(orphans)} words were read off a rendering of the page and "
+                "have no text in the file underneath them. The page shows them and "
+                "no parser gets them; this is what a scan without an OCR layer "
+                "looks like, and the words below are this tool's reading of the "
+                f"picture rather than anything the file says (x {box.x0:.1f}-"
+                f"{box.x1:.1f}, y {box.y0:.1f}-{box.y1:.1f})"
+            ),
+            human_sees=text,
+            machine_reads="",
+            location=Location(page=page.number),
+        )
+    ]
 
 
 def annotation_text(page: InterpretedPage) -> list[Finding]:

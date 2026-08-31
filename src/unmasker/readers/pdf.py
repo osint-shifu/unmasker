@@ -98,7 +98,7 @@ def read_pdf(path: Path) -> Extraction:
                 remarks.append(
                     f"page {number} has no text layer, so there was nothing to "
                     f"search on it{_painted_summary(painted)}. Reading what is "
-                    "under a mark there would need OCR, which unmasker does not do"
+                    f"there means rendering the page and reading it back{_how_to_ocr()}"
                 )
 
     if not units:
@@ -110,6 +110,26 @@ def read_pdf(path: Path) -> Extraction:
         remarks=tuple(remarks),
         drawn=tuple(drawn),
         metadata=metadata,
+        source=path,
+    )
+
+
+def _how_to_ocr() -> str:
+    """Name the flag only when it would actually work.
+
+    `CLAUDE.md`: every command the tool prints must run in the shell that
+    printed it. `filetrail` printed `filetrail --help` at somebody who had not
+    installed it, and the screen was disproved by the first thing they tried.
+    """
+    from ..pdf.rendered import tools_available
+
+    present, missing = tools_available()
+    if present:
+        return " - which `unmasker --ocr` does"
+    return (
+        " - which `--ocr` does, but that needs "
+        + " and ".join(missing)
+        + " on PATH and neither is here"
     )
 
 

@@ -17,7 +17,10 @@ later and hard to remove.
 """
 
 import json
+import shutil
 from pathlib import Path
+
+import pytest
 
 from unmasker.cli import main
 
@@ -371,3 +374,54 @@ def test_a_pdf_comment_reaches_the_report(capsys):
     assert len(comments) == 2
     assert any("Do not minute this" in f["machine_reads"] for f in comments)
     assert all(f["location"]["page"] == 1 for f in comments)
+
+
+def test_ocr_is_off_unless_it_is_asked_for(capsys):
+    """HANDOFF.md decision 4: rendering and reading a page back needs two heavy
+    external binaries and costs seconds a page. The reason it was deferred is
+    the reason it is not the default."""
+    code, out, _ = run(capsys, str(SPECIMENS / "libreoffice-writer-black-bars.pdf"), "--json")
+    doc = json.loads(out)
+    assert not any(
+        f["detector"].startswith("un") and "rendered" in f["detector"] for f in doc["findings"]
+    )
+    assert code == 1
+
+
+@pytest.mark.skipif(
+    not (shutil.which("gs") and shutil.which("tesseract")),
+    reason="needs ghostscript and tesseract",
+)
+def test_ocr_finds_the_bar_without_knowing_what_a_bar_is(capsys):
+    code, out, _ = run(
+        capsys, str(SPECIMENS / "libreoffice-writer-black-bars.pdf"), "--ocr", "--json"
+    )
+    assert code == 1
+    doc = json.loads(out)
+    unrendered = [f for f in doc["findings"] if f["detector"] == "unrendered-text"]
+    assert unrendered
+    assert any("Wanda Testowa-Przyklad" in f["machine_reads"] for f in unrendered)
+    assert all(f["basis"] == "circumstantial" for f in unrendered)
+
+
+@pytest.mark.skipif(
+    not (shutil.which("gs") and shutil.which("tesseract")),
+    reason="needs ghostscript and tesseract",
+)
+def test_ocr_reads_a_page_that_had_no_text_layer(capsys):
+    """The question the tool has declined to answer since its first specimen."""
+    code, out, _ = run(capsys, str(SPECIMENS / "flattened-to-image.pdf"), "--ocr", "--json")
+    assert code == 1
+    (found,) = json.loads(out)["findings"]
+    assert found["detector"] == "unextractable-text"
+    assert "SYNTHETIC" in found["human_sees"].upper()
+    assert found["machine_reads"] == ""
+
+
+def test_ocr_says_what_is_missing_rather_than_failing_obscurely(capsys, monkeypatch):
+    import unmasker.pdf.rendered as rendered
+
+    monkeypatch.setattr(rendered.shutil, "which", lambda name: None)
+    code, _, err = run(capsys, str(SPECIMENS / "libreoffice-writer-black-bars.pdf"), "--ocr")
+    assert code == 2
+    assert "gs" in err and "tesseract" in err
