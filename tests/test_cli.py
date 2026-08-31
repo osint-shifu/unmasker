@@ -359,3 +359,15 @@ def test_an_ordinary_document_is_not_failed_by_its_own_producer_string(capsys):
     1 for every document ever written and would stop meaning anything."""
     code, _, _ = run(capsys, str(SPECIMENS / "libreoffice-writer-properly-redacted.pdf"))
     assert code == 0
+
+
+def test_a_pdf_comment_reaches_the_report(capsys):
+    """The detector is exercised directly elsewhere; this is the wiring, and
+    without it the finding exists and never reaches a reader."""
+    code, out, _ = run(capsys, str(SPECIMENS / "libreoffice-writer-pdf-comments.pdf"), "--json")
+    assert code == 1
+    doc = json.loads(out)
+    comments = [f for f in doc["findings"] if f["detector"] == "comment"]
+    assert len(comments) == 2
+    assert any("Do not minute this" in f["machine_reads"] for f in comments)
+    assert all(f["location"]["page"] == 1 for f in comments)

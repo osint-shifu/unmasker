@@ -31,8 +31,10 @@ unmasker leaked.pdf
 > what was cropped off. Text under an image, reported separately because a scan
 > of a printed page looks the same and usually agrees with itself.
 >
-> In a Word document: text a tracked deletion took off the page and left in
-> the file, comments, and one line naming who edited it and when.
+> Comments: in a Word document, and in a PDF, where they are annotations
+> hanging off the page rather than part of it and no text extraction reports
+> them. In a Word document also: text a tracked deletion took off the page and
+> left in the file, and one line naming who edited it and when.
 >
 > In the metadata of either: a name, a client, a codename or a path that the
 > document's own text never shows. What produced the file and when stays a

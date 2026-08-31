@@ -37,6 +37,7 @@ from __future__ import annotations
 from collections import Counter
 from dataclasses import dataclass, field
 
+from .annotations import Annotation, read_annotations
 from .fonts import FontMetrics, load_font
 from .geometry import BLACK, Colour, Matrix, Rect
 from .tokens import InlineImage, Name, Operator, tokenize
@@ -213,6 +214,12 @@ class InterpretedPage:
     box: Rect
     shapes: tuple[Shape, ...] = ()
     texts: tuple[TextRun, ...] = ()
+
+    annotations: tuple[Annotation, ...] = ()
+    """What hangs off the page without being on it. Read from `/Annots`, not
+    from the content stream, because a comment is never in the content stream
+    and no amount of interpreting one would find it."""
+
     remarks: tuple[str, ...] = ()
     counts: Counter = field(default_factory=Counter)
 
@@ -788,6 +795,7 @@ def interpret_page(page, number: int = 1) -> InterpretedPage:
         resources=_entry(page, "Resources"),
         number=number,
     )
+    result.annotations = tuple(read_annotations(page))
     if not data:
         result.remarks = result.remarks + (
             "this page has no content stream, so there was nothing to interpret",

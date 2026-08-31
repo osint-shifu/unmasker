@@ -363,6 +363,35 @@ def _joined(entries: list[tuple[Glyph, TextRun]]) -> str:
     return "".join(out)
 
 
+def annotation_text(page: InterpretedPage) -> list[Finding]:
+    """Comments and notes attached to the page but not part of it.
+
+    Same statement as a DOCX comment and the same detector name, arriving
+    through a wholly different mechanism: there, a part of a zip the
+    application agrees not to display; here, a dictionary hanging off the page.
+    """
+    findings = []
+    for note in page.annotations:
+        if not note.is_a_note:
+            continue
+        who = f" by {note.author}" if note.author else ""
+        findings.append(
+            Finding(
+                detector="comment",
+                basis=Basis.DIRECT,
+                summary=(
+                    f"a /{note.subtype} annotation{who}, attached to the page "
+                    "and not part of it; it does not print and text extraction "
+                    "does not report it"
+                ),
+                human_sees="",
+                machine_reads=note.contents,
+                location=Location(page=page.number),
+            )
+        )
+    return findings
+
+
 def remarks(page: InterpretedPage) -> list[str]:
     """What this page's detectors could not establish, as opposed to found.
 
@@ -382,9 +411,22 @@ def remarks(page: InterpretedPage) -> list[str]:
             if _background(page, glyph, run) is None:
                 on_a_picture += 1
 
+    painted_notes = sum(
+        1 for note in page.annotations if note.has_appearance and note.subtype != "Popup"
+    )
+    extra = (
+        [
+            f"page {page.number} has {painted_notes} annotation(s) carrying an "
+            "appearance stream; what those paint is not interpreted, so anything "
+            "one of them covers was not checked"
+        ]
+        if painted_notes
+        else []
+    )
+
     if not on_a_picture:
-        return []
-    return [
+        return extra
+    return extra + [
         f"page {page.number} has {_count('x' * on_a_picture)} sitting on a "
         "picture or on a fill this file does not state plainly; whether they "
         "can be read there was not established, because what colour it is "
@@ -401,6 +443,7 @@ def detect(page: InterpretedPage) -> list[Finding]:
     return (
         covered_text(page)
         + text_under_image(page)
+        + annotation_text(page)
         + invisible_text(page)
         + low_contrast_text(page)
         + off_page_text(page)

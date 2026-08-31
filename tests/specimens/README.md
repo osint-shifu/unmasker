@@ -32,6 +32,7 @@ which RFC 2606 reserves for the purpose.
 | [`pdf/libreoffice-writer-image-over-text.pdf`](pdf/libreoffice-writer-image-over-text.md) | LibreOffice 24.2, ImageMagick | a black bar over a name | the name, under a *picture* and not a shape |
 | [`pdf/coverage-edge.pdf`](pdf/coverage-edge.md) | LibreOffice 24.2 | four marks, covered by 100%, 75%, 50% and 25% | where this tool's threshold actually is |
 | [`pdf/text-on-an-image.pdf`](pdf/text-on-an-image.md) | LibreOffice 24.2, ImageMagick | white text on a picture | nothing — and a note saying it could not be judged |
+| [`pdf/libreoffice-writer-pdf-comments.pdf`](pdf/libreoffice-writer-pdf-comments.md) | LibreOffice 24.2 | a two-line board minute | two comments attached to the page and not part of it |
 
 The first two are failed redactions. The next two must not be reported, and for
 different reasons: one was redacted correctly, the other has nothing to search.
@@ -83,8 +84,14 @@ Named here so their absence is not mistaken for coverage:
   glyph box, which is exact for horizontal text and wrong for anything else.
 - **Producers not on this machine.** Acrobat and Word draw their own way, and
   LibreOffice and Chrome already disagree with each other.
-- **Redaction by annotation or by clipping path.** Redaction by image now has
-  a specimen; these two do not.
+- **An annotation carrying an appearance stream.** Comments now have a
+  specimen, but `/AP` is where a bar drawn as an annotation would live, and no
+  producer here writes one — LibreOffice draws its shapes into the content
+  stream, and a `/Square` written by hand renders in nothing without an `/AP`,
+  which is precisely why the appearance stream is the part that matters. The
+  tool notes such an annotation rather than passing over it.
+- **Redaction by clipping path.** Handled by `off-page-text` and covered only
+  by a unit test; no producer here emits it.
 - **A raster page with an invisible OCR text layer underneath**, which is a
   failed redaction that `flattened-to-image.pdf` does not represent.
 - **Word's own OOXML.** Word is not on this machine, so every DOCX here was
