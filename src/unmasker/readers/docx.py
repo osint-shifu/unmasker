@@ -16,6 +16,8 @@ import zipfile
 from pathlib import Path
 from xml.etree import ElementTree
 
+from ..metadata import read_ooxml
+from ..metadata.detectors import describe
 from ..ooxml.revisions import read_revisions
 from .model import Extraction, TextUnit, UnreadableFile
 
@@ -81,7 +83,17 @@ def read_docx(path: Path) -> Extraction:
         record = read_revisions(archive)
         remarks.extend(record.remarks)
 
+        metadata = read_ooxml(archive)
+        remarks.extend(metadata.remarks)
+        remarks.extend(describe(metadata))
+
         if not units:
             remarks.append("the document body holds no text, so there was nothing to search")
 
-    return Extraction(kind="docx", units=tuple(units), remarks=tuple(remarks), revisions=record)
+    return Extraction(
+        kind="docx",
+        units=tuple(units),
+        remarks=tuple(remarks),
+        revisions=record,
+        metadata=metadata,
+    )

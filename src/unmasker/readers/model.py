@@ -71,6 +71,12 @@ class Extraction:
     cannot carry tracked changes", the second is "it can and does not".
     """
 
+    metadata: object | None = None
+    """A `Metadata` record for readers that can see one, else None.
+
+    Typed loosely so the model does not have to know about PDF or OOXML.
+    """
+
     @property
     def has_text(self) -> bool:
         return any(u.text.strip() for u in self.units)

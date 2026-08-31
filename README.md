@@ -32,8 +32,14 @@ unmasker leaked.pdf
 > In a Word document: text a tracked deletion took off the page and left in
 > the file, comments, and one line naming who edited it and when.
 >
-> Not yet: metadata, and OCR. A clean run means the detectors that exist found
-> nothing, and the report says that rather than calling the document clean.
+> In the metadata of either: a name, a client, a codename or a path that the
+> document's own text never shows. What produced the file and when stays a
+> note, not a finding - every PDF has a producer, and a tool that failed every
+> document on that would be no gate at all.
+>
+> Not yet: OCR, and the containers `filetrail` reads that this does not. A
+> clean run means the detectors that exist found nothing, and the report says
+> that rather than calling the document clean.
 >
 > See [`HANDOFF.md`](HANDOFF.md) for what this is, what was decided and why, and
 > what has been verified against real files.

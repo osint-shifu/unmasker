@@ -12,6 +12,8 @@ from pathlib import Path
 
 from pypdf import PdfReader
 
+from ..metadata import read_pdf as read_pdf_metadata
+from ..metadata.detectors import describe
 from ..pdf.interpreter import InterpretedPage, interpret_page
 from .model import Extraction, TextUnit, UnreadableFile
 
@@ -58,6 +60,10 @@ def read_pdf(path: Path) -> Extraction:
             "which is how most 'protected' PDFs are made"
         )
 
+    metadata = read_pdf_metadata(reader)
+    remarks.extend(metadata.remarks)
+    remarks.extend(describe(metadata))
+
     units: list[TextUnit] = []
     drawn: list[InterpretedPage] = []
     for number, page in enumerate(reader.pages, start=1):
@@ -96,7 +102,13 @@ def read_pdf(path: Path) -> Extraction:
     if not units:
         remarks.append("the file has no pages")
 
-    return Extraction(kind="pdf", units=tuple(units), remarks=tuple(remarks), drawn=tuple(drawn))
+    return Extraction(
+        kind="pdf",
+        units=tuple(units),
+        remarks=tuple(remarks),
+        drawn=tuple(drawn),
+        metadata=metadata,
+    )
 
 
 def _painted_summary(painted: InterpretedPage | None) -> str:

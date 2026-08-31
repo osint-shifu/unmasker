@@ -315,3 +315,47 @@ def test_the_plain_docx_specimen_reports_no_tracked_changes(capsys):
     assert not any(
         f["detector"] in ("deleted-text", "comment", "revision-history") for f in doc["findings"]
     )
+
+
+def test_the_metadata_leak_specimen_names_people_the_page_does_not(capsys):
+    """One anonymous sentence on the page, two people in the file."""
+    docx = Path(__file__).parent / "specimens" / "docx"
+    code, out, _ = run(capsys, str(docx / "libreoffice-writer-metadata-leak.docx"), "--json")
+    assert code == 1
+    doc = json.loads(out)
+    reads = {f["machine_reads"] for f in doc["findings"]}
+    assert "Marek Wysocki-Test" in reads
+    assert "Ewa Zielinska-Test" in reads
+    assert "Acme Holdings BV" in reads
+    assert "/home/mwysocki/Templates/acme-board-restricted.ott" in reads
+
+
+def test_the_producer_string_stays_in_the_notes_and_out_of_the_findings(capsys):
+    """CLAUDE.md's worked example, end to end. `LibreOffice/24.2.7.2$Linux_X86_64`
+    has a dotted quad in it and must never be reported as anything but the
+    version of the application that wrote the file."""
+    docx = Path(__file__).parent / "specimens" / "docx"
+    _, out, _ = run(capsys, str(docx / "libreoffice-writer-metadata-leak.docx"), "--json")
+    doc = json.loads(out)
+    assert not any("24.2.7.2" in f["machine_reads"] for f in doc["findings"])
+    assert any("24.2.7.2" in r for r in doc["remarks"])
+
+
+def test_the_same_leak_in_a_pdf_reports_what_that_container_kept(capsys):
+    """The two containers carry different amounts of it, and the PDF keeps
+    less. A tool tried on only one of them would have a partial idea of what
+    metadata is."""
+    pdf = Path(__file__).parent / "specimens" / "pdf"
+    code, out, _ = run(capsys, str(pdf / "libreoffice-writer-metadata-leak.pdf"), "--json")
+    assert code == 1
+    reads = {f["machine_reads"] for f in json.loads(out)["findings"]}
+    assert "Marek Wysocki-Test" in reads
+    assert "Project Harrow" in reads
+    assert "Acme Holdings BV" not in reads, "the PDF export drops custom properties"
+
+
+def test_an_ordinary_document_is_not_failed_by_its_own_producer_string(capsys):
+    """Every PDF has a Producer. If that were a finding the exit code would be
+    1 for every document ever written and would stop meaning anything."""
+    code, _, _ = run(capsys, str(SPECIMENS / "libreoffice-writer-properly-redacted.pdf"))
+    assert code == 0

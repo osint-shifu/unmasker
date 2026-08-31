@@ -1,0 +1,238 @@
+"""What a file says about itself, and what kind of thing each field is.
+
+`filetrail` reads these same fields, and more containers than this does. It
+answers a different question with them - *where did this file come from* - and
+reports each as an origin claim. `/data/filetrail/src/filetrail/sources/
+embedded/documents.py` is the implementation, and it was read before this one
+was written, as `CLAUDE.md` requires. Two things were taken from it: that dates
+have to be normalised out of each container's own format, and that every
+property should be kept rather than a chosen few, because no fixed list
+anticipates which one an investigation will want.
+
+What is different here is the roles.
+
+## The name of a field is evidence
+
+`CLAUDE.md` sets out the worked example. `LibreOffice/24.2.7.2$Linux_X86_64`
+contains a dotted quad; pattern-matching alone reports an IP address; the field
+is called `Application`, so it is a version. Context you already have beats a
+cleverer pattern.
+
+So every field carries a **role**, decided by its name *and its container*, and
+the role decides what may be said about it:
+
+    tool      what produced the file. Never a finding: every PDF has a
+              Producer, and a tool that fired on those would exit non-zero on
+              every document ever written.
+    content   something a person put there - a name, a title, a client, a
+              codename. A finding when the document does not show it.
+    time      a timestamp, normalised. A finding only when two of them
+              contradict each other.
+    count     revisions, editing minutes, page counts. Context, not a finding.
+    other     read, kept, and not reasoned about.
+
+The container matters as much as the name: a PDF's `/Creator` is the
+application that made the original document, and an OOXML `dc:creator` is a
+person. One name, two meanings.
+"""
+
+from __future__ import annotations
+
+import re
+import zipfile
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from xml.etree import ElementTree
+
+__all__ = ["Field", "Metadata", "read_ooxml", "read_pdf"]
+
+# Roles, per container. A name absent from these tables is `other`: read and
+# kept, and nothing claimed about it.
+PDF_ROLES = {
+    "producer": "tool",
+    "creator": "tool",  # the application, in a PDF
+    "author": "content",
+    "title": "content",
+    "subject": "content",
+    "keywords": "content",
+    "creationdate": "time",
+    "moddate": "time",
+    "trapped": "other",
+}
+
+OOXML_ROLES = {
+    "creator": "content",  # a person, in OOXML
+    "lastmodifiedby": "content",
+    "title": "content",
+    "subject": "content",
+    "description": "content",
+    "keywords": "content",
+    "category": "content",
+    "contentstatus": "content",
+    "company": "content",
+    "manager": "content",
+    "template": "content",
+    "application": "tool",
+    "appversion": "tool",
+    "created": "time",
+    "modified": "time",
+    "lastprinted": "time",
+    "revision": "count",
+    "totaltime": "count",
+    "pages": "count",
+    "words": "count",
+    "characters": "count",
+    "characterswithspaces": "count",
+    "paragraphs": "count",
+    "lines": "count",
+    "language": "other",
+}
+
+CORE = "http://schemas.openxmlformats.org/package/2006/metadata/core-properties"
+EXT = "http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"
+CUSTOM = "http://schemas.openxmlformats.org/officeDocument/2006/custom-properties"
+
+
+@dataclass(frozen=True)
+class Field:
+    name: str
+    value: str
+    part: str
+    """Where it was read from: `/Info`, `docProps/core.xml`, and so on. Kept so
+    a reader can go and look at the same place."""
+
+    role: str
+
+
+@dataclass(frozen=True)
+class Metadata:
+    fields: tuple[Field, ...] = ()
+    remarks: tuple[str, ...] = field(default_factory=tuple)
+
+    def get(self, name: str) -> Field | None:
+        for entry in self.fields:
+            if entry.name.lower() == name.lower():
+                return entry
+        return None
+
+    def by_role(self, role: str) -> tuple[Field, ...]:
+        return tuple(entry for entry in self.fields if entry.role == role)
+
+
+def _clean(value) -> str:
+    return str(value).replace("\x00", "").strip() if value is not None else ""
+
+
+def _pdf_date(value: str) -> str:
+    """`D:YYYYMMDDHHmmSS+01'00'` into an ISO timestamp, or back unchanged.
+
+    Unchanged rather than dropped: a date this cannot parse is still what the
+    file says, and losing it would be the tool deciding the file had said
+    nothing.
+    """
+    match = re.match(r"D?:?(\d{4})(\d{2})?(\d{2})?(\d{2})?(\d{2})?(\d{2})?", value.strip())
+    if not match or not match.group(1):
+        return value
+    parts = [int(g) if g else d for g, d in zip(match.groups(), (0, 1, 1, 0, 0, 0), strict=True)]
+    try:
+        stamp = datetime(*parts, tzinfo=timezone.utc)
+    except ValueError:
+        return value
+    return stamp.isoformat().replace("+00:00", "Z")
+
+
+def read_pdf(reader) -> Metadata:
+    """Read a PDF's Info dictionary through pypdf.
+
+    `filetrail` scans the raw bytes for these, because it carries no runtime
+    dependencies and cannot ask anyone. This project already depends on pypdf
+    and the argument for that is written down, so it asks.
+    """
+    try:
+        info = reader.metadata or {}
+    except Exception as exc:
+        return Metadata(remarks=(f"the Info dictionary could not be read: {exc}",))
+
+    found: list[Field] = []
+    for key, raw in info.items():
+        name = str(key).lstrip("/")
+        value = _clean(raw)
+        if not value:
+            continue
+        role = PDF_ROLES.get(name.lower(), "other")
+        if role == "time":
+            value = _pdf_date(value)
+        found.append(Field(name=name, value=value, part="/Info", role=role))
+
+    remarks = []
+    try:
+        if reader.xmp_metadata is not None:
+            remarks.append(
+                "the file also carries XMP metadata, which unmasker does not "
+                "read yet; it can hold earlier filenames and document histories"
+            )
+    except Exception:
+        pass
+
+    return Metadata(fields=tuple(found), remarks=tuple(remarks))
+
+
+def _parse(archive: zipfile.ZipFile, member: str):
+    try:
+        return ElementTree.fromstring(archive.read(member)), None
+    except (ElementTree.ParseError, KeyError, OSError) as exc:
+        return None, f"{member} could not be parsed and was skipped: {exc}"
+
+
+def read_ooxml(archive: zipfile.ZipFile) -> Metadata:
+    """Read `docProps/core.xml`, `app.xml` and `custom.xml`.
+
+    Custom properties get the `content` role whatever they are called. A
+    standard property is something a tool wrote; a custom one is something a
+    person put there on purpose, and there is no name table that could
+    anticipate them.
+    """
+    names = set(archive.namelist())
+    found: list[Field] = []
+    remarks: list[str] = []
+
+    for member in ("docProps/core.xml", "docProps/app.xml"):
+        if member not in names:
+            continue
+        root, problem = _parse(archive, member)
+        if problem:
+            remarks.append(problem)
+            continue
+        for child in root:
+            name = child.tag.rsplit("}", 1)[-1]
+            value = _clean(child.text)
+            if not value:
+                continue
+            found.append(
+                Field(
+                    name=name,
+                    value=value,
+                    part=member,
+                    role=OOXML_ROLES.get(name.lower(), "other"),
+                )
+            )
+
+    if "docProps/custom.xml" in names:
+        root, problem = _parse(archive, "docProps/custom.xml")
+        if problem:
+            remarks.append(problem)
+        elif root is not None:
+            for node in root.iter(f"{{{CUSTOM}}}property"):
+                name = node.get("name") or "unnamed"
+                value = _clean("".join(child.text or "" for child in node))
+                if value:
+                    found.append(
+                        Field(
+                            name=name,
+                            value=value,
+                            part="docProps/custom.xml",
+                            role="content",
+                        )
+                    )
+
+    return Metadata(fields=tuple(found), remarks=tuple(remarks))

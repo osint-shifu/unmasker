@@ -24,6 +24,8 @@ which RFC 2606 reserves for the purpose.
 | [`pdf/libreoffice-writer-hidden-in-plain-sight.pdf`](pdf/libreoffice-writer-hidden-in-plain-sight.md) | LibreOffice 24.2 Writer, cropped with pypdf | one readable line and a navy bar | three lines hidden by colour and by position |
 | [`docx/libreoffice-writer-hidden-characters.docx`](docx/libreoffice-writer-hidden-characters.md) | LibreOffice 24.2 Writer | four ordinary lines | a zero-width space, an override, a hidden instruction, a homoglyph |
 | [`docx/libreoffice-writer-tracked-changes.docx`](docx/libreoffice-writer-tracked-changes.md) | LibreOffice 24.2 Writer | a settled figure of 90,000 EUR | the 250,000 EUR it replaced, a deleted sentence, and a candid comment |
+| [`docx/libreoffice-writer-metadata-leak.docx`](docx/libreoffice-writer-metadata-leak.md) | LibreOffice 24.2 Writer | one anonymous sentence | two people, a client, a codename and a home directory |
+| [`pdf/libreoffice-writer-metadata-leak.pdf`](pdf/libreoffice-writer-metadata-leak.md) | LibreOffice 24.2 Writer | the same sentence | the same leak, minus what the PDF export drops |
 
 The first two are failed redactions. The next two must not be reported, and for
 different reasons: one was redacted correctly, the other has nothing to search.
@@ -33,6 +35,9 @@ hides, it hides by colour or by position — so every bar detector must stay
 silent on it. The first DOCX is the tier-2 specimen, and every tier-2
 detector fires on it exactly once. The second hides nothing by drawing or by
 character: its deletions are text the application has agreed not to display.
+The last pair is one source document in two containers, because the two carry
+different amounts of the same metadata and a tool tried on one of them would
+have a partial idea of what metadata is.
 
 ## Rebuilding them
 

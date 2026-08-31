@@ -27,6 +27,7 @@ from pathlib import Path
 
 from . import __version__
 from .findings import Finding
+from .metadata.detectors import detect as detect_metadata
 from .ooxml.detectors import detect as detect_revisions
 from .pdf.detectors import detect as detect_drawn
 from .readers import UnreadableFile, read
@@ -61,6 +62,12 @@ def collect(extraction) -> list[Finding]:
     # Tier 4, for readers that can see what an application agreed not to show.
     if extraction.revisions is not None:
         found.extend(detect_revisions(extraction.revisions))
+
+    # Metadata is only a finding where it says something the document does not,
+    # so the detector is given the document's own text to compare against.
+    if extraction.metadata is not None:
+        shown = "\n".join(unit.text for unit in extraction.units)
+        found.extend(detect_metadata(extraction.metadata, shown))
 
     return sorted(found, key=lambda f: f.location.sort_key)
 
