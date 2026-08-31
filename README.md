@@ -19,7 +19,9 @@ unmasker leaked.pdf
 >
 > Text under a filled shape, reported per character rather than per line, so a
 > bar dragged too short is reported as covering exactly what it covers. Text
-> drawn in a render mode that paints nothing. Zero-width characters, bidi
+> drawn in a render mode that paints nothing, or at an opacity that paints
+> nothing - `color: transparent` is one CSS declaration and changes no render
+> mode at all. Zero-width characters, bidi
 > overrides, plane-14 tag characters and mixed-script words, in PDF, DOCX and
 > any text file.
 >
