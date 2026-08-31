@@ -25,6 +25,11 @@ from ..findings import Basis, Finding, Location
 from .revisions import RevisionRecord
 
 
+def _count(text: str) -> str:
+    """`1 character`, not `1 characters`. A report is read by a person."""
+    return f"{len(text)} character" + ("" if len(text) == 1 else "s")
+
+
 def _attribution(author: str | None, date: str | None) -> str:
     who = author or "an author the file does not state"
     when = f" on {date}" if date else ", at a time the file does not state"
@@ -44,7 +49,7 @@ def deleted_text(record: RevisionRecord) -> list[Finding]:
                 detector="deleted-text",
                 basis=Basis.DIRECT,
                 summary=(
-                    f"{len(revision.text)} characters {kind} by "
+                    f"{_count(revision.text)} {kind} by "
                     f"{_attribution(revision.author, revision.date)}{where}; the "
                     "text is still in the file"
                 ),

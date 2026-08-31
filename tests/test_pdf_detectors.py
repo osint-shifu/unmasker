@@ -795,3 +795,35 @@ def test_every_detector_now_has_a_specimen():
         "low-contrast-text",
         "off-page-text",
     }
+
+
+# --------------------------------------------------------------------------
+# the coverage edge
+# --------------------------------------------------------------------------
+
+EDGE = "coverage-edge.pdf"
+
+
+def test_the_threshold_is_where_the_specimen_says_it_is():
+    """Four single-character marks under bars covering 100%, 75%, 50% and 25%
+    of them. A threshold has to be somewhere, and a file that records where
+    makes moving it a decision rather than a drift."""
+    found = covered_text(interpret_page(page_of(EDGE)))
+    assert sorted(f.machine_reads for f in found) == ["A", "B"]
+
+
+def test_a_mark_covered_by_a_quarter_is_not_reported():
+    found = covered_text(interpret_page(page_of(EDGE)))
+    assert "D" not in {f.machine_reads for f in found}
+
+
+def test_the_uncovered_marks_are_named_in_the_line_context():
+    found = covered_text(interpret_page(page_of(EDGE)))
+    first = next(f for f in found if f.machine_reads == "A")
+    assert "B C D" in first.summary
+
+
+def test_one_character_is_reported_in_the_singular():
+    """A report is read by a person."""
+    found = covered_text(interpret_page(page_of(EDGE)))
+    assert all(f.summary.startswith("1 character under") for f in found)

@@ -67,6 +67,11 @@ CONTRAST = 0.08
 EXACT = 0.005
 
 
+def _count(text: str) -> str:
+    """`1 character`, not `1 characters`. A report is read by a person."""
+    return f"{len(text)} character" + ("" if len(text) == 1 else "s")
+
+
 def _covers(shape: Shape, page: Rect, kinds: tuple[str, ...] = ("fill",)) -> bool:
     """Whether this shape could hide anything under it."""
     if shape.kind not in kinds:
@@ -246,7 +251,7 @@ def _finding(
         f"x {shape.visible_bbox.x0:.1f}-{shape.visible_bbox.x1:.1f}, "
         f"y {shape.visible_bbox.y0:.1f}-{shape.visible_bbox.y1:.1f}"
     )
-    summary = f"{len(text)} characters under {described} at {where}"
+    summary = f"{_count(text)} under {described} at {where}"
     if shape.kind == "image":
         summary += (
             "; an image over a text layer is also what a scan of a printed page "
@@ -328,7 +333,7 @@ def invisible_text(page: InterpretedPage) -> list[Finding]:
                     basis=(
                         Basis.CIRCUMSTANTIAL if _why_invisible(run)[0] == "faint" else Basis.DIRECT
                     ),
-                    summary=f"{len(text)} characters {why}",
+                    summary=f"{_count(text)} {why}",
                     human_sees="",
                     machine_reads=text,
                     location=Location(page=page.number),
@@ -445,7 +450,7 @@ def low_contrast_text(page: InterpretedPage) -> list[Finding]:
                     detector="low-contrast-text",
                     basis=Basis.DIRECT if worst <= EXACT else Basis.CIRCUMSTANTIAL,
                     summary=(
-                        f"{len(text)} characters painted {_hex(ink)} on "
+                        f"{_count(text)} painted {_hex(ink)} on "
                         f"{_hex(paper)}"
                         + (
                             ", the same colour"
@@ -510,7 +515,7 @@ def off_page_text(page: InterpretedPage) -> list[Finding]:
                     detector="off-page-text",
                     basis=Basis.DIRECT,
                     summary=(
-                        f"{len(text)} characters at x {box.x0:.1f}-{box.x1:.1f}, "
+                        f"{_count(text)} at x {box.x0:.1f}-{box.x1:.1f}, "
                         f"y {box.y0:.1f}-{box.y1:.1f}, entirely outside the visible "
                         f"area x {visible.x0:.1f}-{visible.x1:.1f}, "
                         f"y {visible.y0:.1f}-{visible.y1:.1f}"

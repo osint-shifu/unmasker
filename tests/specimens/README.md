@@ -30,6 +30,7 @@ which RFC 2606 reserves for the purpose.
 | [`pdf/chrome-transparent-text.pdf`](pdf/chrome-transparent-text.md) | Skia/PDF m152 (headless Chrome) | two paragraphs and a blank gap | two more paragraphs, painted at no opacity |
 | [`pdf/redacted-scan-with-ocr.pdf`](pdf/redacted-scan-with-ocr.md) | LibreOffice, Ghostscript, tesseract 5.3.4, ImageMagick, pypdf | a scan with the figure blacked out | an OCR layer made before the redaction, still spelling it |
 | [`pdf/libreoffice-writer-image-over-text.pdf`](pdf/libreoffice-writer-image-over-text.md) | LibreOffice 24.2, ImageMagick | a black bar over a name | the name, under a *picture* and not a shape |
+| [`pdf/coverage-edge.pdf`](pdf/coverage-edge.md) | LibreOffice 24.2 | four marks, covered by 100%, 75%, 50% and 25% | where this tool's threshold actually is |
 
 The first two are failed redactions. The next two must not be reported, and for
 different reasons: one was redacted correctly, the other has nothing to search.
@@ -61,10 +62,11 @@ a builder still runs, not as part of the test suite.
 
 Named here so their absence is not mistaken for coverage:
 
-- **A bar drawn across the middle of a word**, so that one glyph is half
-  covered. `libreoffice-writer-partial-bars.pdf` closed the partial-coverage
-  gap, but every bar in it stops in a gap between words; the genuinely
-  ambiguous edge is still untested.
+- **A bar covering a glyph vertically** rather than horizontally — a rule drawn
+  along a line clips its descenders, which is the same fraction arrived at a
+  different way. `coverage-edge.pdf` closed the horizontal case and records
+  where the threshold is; the threshold is on area and does not care which way
+  the overlap runs, but no file demonstrates that.
 - **Text outside the MediaBox.** LibreOffice refuses to emit it, so the
   off-page case is represented only by a CropBox smaller than the MediaBox.
   Another producer is needed for the other half.
