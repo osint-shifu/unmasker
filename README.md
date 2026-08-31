@@ -55,8 +55,8 @@ Python, BSD-licensed and has no dependencies of its own. The reasoning for
 having it at all is written down in [`HANDOFF.md`](HANDOFF.md); any second one
 has to earn its place the same way.
 
-Reads PDF, DOCX, ODT and any text file. Local, read-only, no network, and it
-never writes to the file it is given.
+Reads PDF, DOCX, ODT, XLSX, ODS and any text file. Local, read-only, no
+network, and it never writes to the file it is given.
 
 | | |
 | --- | --- |
@@ -93,6 +93,20 @@ source as well as PDF.
 | `bidi-control` | direction overrides — a filename written `invoice⟨U+202E⟩gpj.exe` in the file reads as `invoiceexe.jpg` on screen, and is an executable |
 | `tag-characters` | plane-14 tag characters, decoded; the channel of choice for hiding instructions in text meant for a model |
 | `mixed-script` | a single word spanning two scripts — Cyrillic `а` inside a Latin domain |
+
+### In a spreadsheet
+
+A row, a column or a whole sheet carries an attribute saying not to draw it,
+and every value in it stays in the file exactly as typed. Someone selects three
+columns, right-clicks, chooses Hide, and sends the workbook out believing the
+numbers are gone.
+
+| | |
+| --- | --- |
+| `hidden-sheet` | a sheet the workbook carries and never shows — and it says so louder when the sheet is marked `veryHidden`, which the application offers no way to undo |
+| `hidden-rows` | rows nobody sees, collapsed into one finding per block, because hiding rows 10 to 40 is one act by one person |
+| `hidden-columns` | the same by column, addressed the way the person who hid it saw it: `column D`, not an index |
+| `filtered-rows` | rows a filter is holding back rather than a person having hidden them — a weaker claim, and reported as one |
 
 ### In the container
 

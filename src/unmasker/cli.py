@@ -34,6 +34,7 @@ from .pdf.rendered import read_page_back, tools_available
 from .readers import UnreadableFile, read
 from .report import Style, render
 from .revisions import detect as detect_revisions
+from .sheets import detect as detect_sheets
 from .text.invisible import scan_text
 from .theme import glyphs, resolve_depth
 
@@ -64,6 +65,12 @@ def collect(extraction, ocr: bool = False) -> list[Finding]:
     # Tier 4, for readers that can see what an application agreed not to show.
     if extraction.revisions is not None:
         found.extend(detect_revisions(extraction.revisions))
+
+    # The same statement in a workbook: a row, a column or a sheet that carries
+    # an attribute saying not to draw it, and every value in it still in the
+    # file.
+    if extraction.sheets is not None:
+        found.extend(detect_sheets(extraction.sheets))
 
     # Reading each page back costs a render and an OCR pass - seconds a page -
     # and needs two external binaries, which is why HANDOFF.md decision 4 kept

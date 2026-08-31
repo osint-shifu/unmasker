@@ -13,6 +13,7 @@ from .model import Extraction, TextUnit, UnreadableFile
 from .odf import read_odf
 from .pdf import read_pdf
 from .plain import read_plain
+from .spreadsheet import odf_flavour, read_ods, read_xlsx
 
 __all__ = ["Extraction", "TextUnit", "UnreadableFile", "read"]
 
@@ -47,8 +48,19 @@ def _read_zip(path: Path) -> Extraction:
 
     if "word/document.xml" in names:
         return read_docx(path)
+    if "xl/workbook.xml" in names:
+        return read_xlsx(path)
     if "content.xml" in names:
+        # Every OpenDocument file is a `content.xml`, and until the flavour is
+        # asked for they all look like text documents. Sending a spreadsheet to
+        # the text reader is not a near miss: it reads the hidden rows and
+        # columns as visible prose and then reports the workbook clean.
+        with zipfile.ZipFile(path) as archive:
+            flavour = odf_flavour(archive)
+        if flavour == "spreadsheet":
+            return read_ods(path)
         return read_odf(path)
     raise UnreadableFile(
-        f"{path.name} is a zip but neither a Word document nor an OpenDocument one"
+        f"{path.name} is a zip but not a document unmasker reads: it holds "
+        "no Word document, workbook or OpenDocument body"
     )

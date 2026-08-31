@@ -82,6 +82,15 @@ class Extraction:
     Typed loosely so the model does not have to know about PDF or OOXML.
     """
 
+    sheets: object | None = None
+    """A `SheetRecord` for readers that can see a workbook, else None.
+
+    Separate from `units` on purpose, and it is the whole point of the
+    spreadsheet reader: the cells an application agreed not to draw must not
+    reach `units`, where they would be searched as though a person could see
+    them - and then reported clean.
+    """
+
     @property
     def has_text(self) -> bool:
         return any(u.text.strip() for u in self.units)

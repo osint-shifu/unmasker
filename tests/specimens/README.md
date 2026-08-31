@@ -34,6 +34,9 @@ which RFC 2606 reserves for the purpose.
 | [`pdf/coverage-edge.pdf`](pdf/coverage-edge.md) | LibreOffice 24.2 | four marks, covered by 100%, 75%, 50% and 25% | where this tool's threshold actually is |
 | [`pdf/text-on-an-image.pdf`](pdf/text-on-an-image.md) | LibreOffice 24.2, ImageMagick | white text on a picture | nothing — and a note saying it could not be judged |
 | [`pdf/libreoffice-writer-pdf-comments.pdf`](pdf/libreoffice-writer-pdf-comments.md) | LibreOffice 24.2 | a two-line board minute | two comments attached to the page and not part of it |
+| [`xlsx/libreoffice-calc-hidden-columns.xlsx`](xlsx/libreoffice-calc-hidden-columns.md) | LibreOffice 24.2 Calc | a tender evaluation, columns A B C E F | a hidden column, a hidden row, a hidden sheet and a candid comment |
+| [`ods/libreoffice-calc-hidden-columns.ods`](ods/libreoffice-calc-hidden-columns.md) | LibreOffice 24.2 Calc | the same evaluation | the same four, stated the other family's way |
+| [`ods/libreoffice-calc-filtered-rows.ods`](ods/libreoffice-calc-filtered-rows.md) | LibreOffice 24.2 Calc | two open cases | two more the filter is holding back |
 
 Every specimen that hides text *on the page* is also found by `--ocr`, which
 renders the page and reads the picture back and knows none of the mechanisms —
@@ -49,9 +52,15 @@ hides, it hides by colour or by position — so every bar detector must stay
 silent on it. The first DOCX is the tier-2 specimen, and every tier-2
 detector fires on it exactly once. The second hides nothing by drawing or by
 character: its deletions are text the application has agreed not to display.
-The last pair is one source document in two containers, because the two carry
-different amounts of the same metadata and a tool tried on one of them would
-have a partial idea of what metadata is.
+The metadata pair is one source document in two containers, because the two
+carry different amounts of the same metadata and a tool tried on one of them
+would have a partial idea of what metadata is. The spreadsheet pair is the same
+argument about hiding: OOXML writes it as an attribute on the thing hidden, ODF
+puts a whole sheet's visibility behind a named style, and a reader that got
+either wrong would disagree with the other. The .ods of that pair is also the
+file that caught the worst bug this project has had - `unmasker` read its
+hidden row, hidden column and hidden sheet as ordinary visible prose and then
+reported the workbook clean.
 
 ## Rebuilding them
 
@@ -102,12 +111,24 @@ Named here so their absence is not mistaken for coverage:
   by a unit test; no producer here emits it.
 - **A raster page with an invisible OCR text layer underneath**, which is a
   failed redaction that `flattened-to-image.pdf` does not represent.
+- **A sheet marked `veryHidden`**, which the spreadsheet's own interface offers
+  no way to undo. LibreOffice cannot set it in either format, so the reader
+  handles it and only a synthetic test exercises it.
+- **An `autoFilter` element**, which records what a filter was set to.
+  LibreOffice's ODS writes none, and its .xlsx export drops the filter/hidden
+  distinction altogether.
+- **A spreadsheet's tracked changes.** ODF carries `table:tracked-changes` with
+  cell-content changes in it, and nothing here reads or tests one.
+- **Excel and Word themselves.** Neither is on this machine, so every OOXML
+  file here was written by LibreOffice.
+- **Presentations.** `.pptx` and `.odp` are the same containers again, with
+  hidden slides and speaker notes in place of hidden rows, and nothing here
+  reads or tests one. An `.odp` still goes to the reader for text documents,
+  which is the defect the spreadsheet pair was built to fix, one container
+  over.
 - **Word's own OOXML.** Word is not on this machine, so every DOCX here was
   written by LibreOffice. It emits valid revision markup, but two producers
   never agree about everything — the PDF specimens proved that twice.
-- **Spreadsheets and presentations**, in either family. `.xlsx`, `.pptx`,
-  `.ods` and `.odp` are the same containers with different body parts, and
-  nothing here reads or tests one.
 - **`w:moveFrom` / `w:moveTo` from a real producer.** LibreOffice does not emit
   move tracking; the reader handles it and only a synthetic test exercises it.
 - **Nothing, on this front.** Every detector now fires on a committed file that
