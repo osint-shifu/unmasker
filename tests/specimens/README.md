@@ -23,14 +23,16 @@ which RFC 2606 reserves for the purpose.
 | [`pdf/libreoffice-writer-partial-bars.pdf`](pdf/libreoffice-writer-partial-bars.md) | LibreOffice 24.2 Writer | four bars dragged too short | the covered words, and only those |
 | [`pdf/libreoffice-writer-hidden-in-plain-sight.pdf`](pdf/libreoffice-writer-hidden-in-plain-sight.md) | LibreOffice 24.2 Writer, cropped with pypdf | one readable line and a navy bar | three lines hidden by colour and by position |
 | [`docx/libreoffice-writer-hidden-characters.docx`](docx/libreoffice-writer-hidden-characters.md) | LibreOffice 24.2 Writer | four ordinary lines | a zero-width space, an override, a hidden instruction, a homoglyph |
+| [`docx/libreoffice-writer-tracked-changes.docx`](docx/libreoffice-writer-tracked-changes.md) | LibreOffice 24.2 Writer | a settled figure of 90,000 EUR | the 250,000 EUR it replaced, a deleted sentence, and a candid comment |
 
 The first two are failed redactions. The next two must not be reported, and for
 different reasons: one was redacted correctly, the other has nothing to search.
 The partial-bars file holds the detector honest about *how much* a bar covers.
 The hidden-in-plain-sight file has nothing drawn over anything — everything it
 hides, it hides by colour or by position — so every bar detector must stay
-silent on it. The DOCX is the tier-2 specimen, and every tier-2 detector fires
-on it exactly once.
+silent on it. The first DOCX is the tier-2 specimen, and every tier-2
+detector fires on it exactly once. The second hides nothing by drawing or by
+character: its deletions are text the application has agreed not to display.
 
 ## Rebuilding them
 
@@ -66,9 +68,10 @@ Named here so their absence is not mistaken for coverage:
   shape.
 - **A raster page with an invisible OCR text layer underneath**, which is a
   failed redaction that `flattened-to-image.pdf` does not represent.
-- **DOCX tracked changes.** `w:del` keeps deleted text in the file, and no
-  specimen carries any. Word is not on this machine, so LibreOffice will have to
-  produce them, and LibreOffice and Chrome already disagree with each other about
-  PDF — expect the same for OOXML.
+- **Word's own OOXML.** Word is not on this machine, so every DOCX here was
+  written by LibreOffice. It emits valid revision markup, but two producers
+  never agree about everything — the PDF specimens proved that twice.
+- **`w:moveFrom` / `w:moveTo` from a real producer.** LibreOffice does not emit
+  move tracking; the reader handles it and only a synthetic test exercises it.
 - **The rest of tier 1 and tier 3.** No specimen yet for invisible render mode
   (`3 Tr`), text in the colour of its background, or text off the page.

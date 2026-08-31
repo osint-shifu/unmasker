@@ -2,9 +2,10 @@
 
 This reads what a reader *sees*: the `w:t` runs of the document body, its
 headers and its footers. It deliberately does not read `w:delText`, the deleted
-text that tracked changes leave inside the file - that is a tier-4 finding with
-its own shape (who deleted what, and when), and folding it in here would report
-it as ordinary body text, which is the opposite of what it is.
+text that tracked changes leave inside the file - folding that in here would
+report it as ordinary body text, which is the opposite of what it is. It is
+read separately, by `unmasker.ooxml.revisions`, which keeps the author and the
+date attached to it; the record comes back on the extraction.
 
 No new dependency: a DOCX is a zip of XML, and both are in the standard library.
 """
@@ -15,6 +16,7 @@ import zipfile
 from pathlib import Path
 from xml.etree import ElementTree
 
+from ..ooxml.revisions import read_revisions
 from .model import Extraction, TextUnit, UnreadableFile
 
 W = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
@@ -76,9 +78,10 @@ def read_docx(path: Path) -> Extraction:
             if text.strip():
                 units.append(TextUnit(text=text))
 
-        if any(n.startswith("word/comments") for n in names):
-            remarks.append("the file carries comments, which unmasker does not read yet")
+        record = read_revisions(archive)
+        remarks.extend(record.remarks)
+
         if not units:
             remarks.append("the document body holds no text, so there was nothing to search")
 
-    return Extraction(kind="docx", units=tuple(units), remarks=tuple(remarks))
+    return Extraction(kind="docx", units=tuple(units), remarks=tuple(remarks), revisions=record)

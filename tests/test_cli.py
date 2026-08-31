@@ -259,3 +259,59 @@ def test_the_hidden_in_plain_sight_specimen_exits_non_zero(capsys):
     assert code == 1
     assert "low-contrast-text" in out
     assert "off-page-text" in out
+
+
+def test_the_tracked_changes_specimen_reports_what_was_struck_out(capsys):
+    """Exact values are asserted through --json.
+
+    A long value wraps in the terminal report and its continuation lines carry
+    the gutter glyph, so the printed form is not something to grep for whole
+    strings in. That is the wrapping working as `DESIGN.md` intends - nothing
+    is truncated, but nothing promises to be on one line either - and --json
+    is the form that does make that promise.
+    """
+    docx = Path(__file__).parent / "specimens" / "docx"
+    code, out, _ = run(capsys, str(docx / "libreoffice-writer-tracked-changes.docx"), "--json")
+    assert code == 1
+    reads = [f["machine_reads"] for f in json.loads(out)["findings"]]
+    assert "250,000 EUR" in reads
+    assert any("1.4 million EUR" in r for r in reads)
+    assert any("Do not send this version" in r for r in reads)
+
+
+def test_the_tracked_changes_specimen_names_its_kinds_on_the_terminal(capsys):
+    docx = Path(__file__).parent / "specimens" / "docx"
+    _, out, _ = run(capsys, str(docx / "libreoffice-writer-tracked-changes.docx"))
+    for kind in ("deleted-text", "comment", "revision-history"):
+        assert kind in out
+    assert "250,000 EUR" in out
+
+
+def test_the_tracked_changes_specimen_reports_its_authors_once(capsys):
+    """Not once per change. Who edited a file is one fact about the file."""
+    docx = Path(__file__).parent / "specimens" / "docx"
+    _, out, _ = run(capsys, str(docx / "libreoffice-writer-tracked-changes.docx"), "--json")
+    doc = json.loads(out)
+    history = [f for f in doc["findings"] if f["detector"] == "revision-history"]
+    assert len(history) == 1
+    assert history[0]["basis"] == "self-reported"
+    assert "Anna Testowa" in history[0]["machine_reads"]
+
+
+def test_the_visible_text_of_that_specimen_is_not_reported_as_hidden(capsys):
+    docx = Path(__file__).parent / "specimens" / "docx"
+    _, out, _ = run(capsys, str(docx / "libreoffice-writer-tracked-changes.docx"), "--json")
+    doc = json.loads(out)
+    reads = " ".join(f["machine_reads"] for f in doc["findings"])
+    assert "90,000 EUR" not in reads, "the inserted figure is in plain sight"
+    assert "Neither party admits liability" not in reads
+
+
+def test_the_plain_docx_specimen_reports_no_tracked_changes(capsys):
+    """The tier-2 DOCX has no revisions. Its findings must all be characters."""
+    docx = Path(__file__).parent / "specimens" / "docx"
+    _, out, _ = run(capsys, str(docx / "libreoffice-writer-hidden-characters.docx"), "--json")
+    doc = json.loads(out)
+    assert not any(
+        f["detector"] in ("deleted-text", "comment", "revision-history") for f in doc["findings"]
+    )

@@ -27,6 +27,7 @@ from pathlib import Path
 
 from . import __version__
 from .findings import Finding
+from .ooxml.detectors import detect as detect_revisions
 from .pdf.detectors import detect as detect_drawn
 from .readers import UnreadableFile, read
 from .report import Style, render
@@ -56,6 +57,10 @@ def collect(extraction) -> list[Finding]:
     # is allowed to suppress the other.
     for painted in extraction.drawn:
         found.extend(detect_drawn(painted))
+
+    # Tier 4, for readers that can see what an application agreed not to show.
+    if extraction.revisions is not None:
+        found.extend(detect_revisions(extraction.revisions))
 
     return sorted(found, key=lambda f: f.location.sort_key)
 

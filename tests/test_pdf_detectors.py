@@ -362,7 +362,7 @@ def test_an_exact_colour_match_is_direct_and_a_near_one_is_circumstantial():
 
 
 def test_a_background_whose_colour_is_unreadable_is_not_assumed_to_be_paper():
-    """"We cannot tell what is behind this" and "it is white" are different
+    """ "We cannot tell what is behind this" and "it is white" are different
     answers, and only one of them is true. A pattern fill gives the first."""
     assert (
         low_contrast_text(
@@ -436,9 +436,7 @@ def test_text_clipped_entirely_away_is_off_the_page_too():
         clip=Rect(0, 400, 595, 842),
         order=0,
     )
-    (found,) = off_page_text(
-        InterpretedPage(number=1, box=PAGE, shapes=(), texts=(clipped,))
-    )
+    (found,) = off_page_text(InterpretedPage(number=1, box=PAGE, shapes=(), texts=(clipped,)))
     assert found.machine_reads == "CLIPPED"
 
 

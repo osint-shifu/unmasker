@@ -29,9 +29,11 @@ unmasker leaked.pdf
 > what was cropped off. Text under an image, reported separately because a scan
 > of a printed page looks the same and usually agrees with itself.
 >
-> Not yet: tracked changes, metadata, and OCR. A clean run means the detectors
-> that exist found nothing, and the report says that rather than calling the
-> document clean.
+> In a Word document: text a tracked deletion took off the page and left in
+> the file, comments, and one line naming who edited it and when.
+>
+> Not yet: metadata, and OCR. A clean run means the detectors that exist found
+> nothing, and the report says that rather than calling the document clean.
 >
 > See [`HANDOFF.md`](HANDOFF.md) for what this is, what was decided and why, and
 > what has been verified against real files.

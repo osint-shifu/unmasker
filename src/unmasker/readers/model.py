@@ -63,6 +63,14 @@ class Extraction:
     the rectangle to have come out of the same reading of the same bytes.
     """
 
+    revisions: object | None = None
+    """A `RevisionRecord` for readers that can see tracked changes, else None.
+
+    Typed loosely so the model does not have to know about OOXML. `None` and
+    an empty record mean different things: the first is "this kind of file
+    cannot carry tracked changes", the second is "it can and does not".
+    """
+
     @property
     def has_text(self) -> bool:
         return any(u.text.strip() for u in self.units)
