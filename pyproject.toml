@@ -1,0 +1,66 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "unmasker"
+version = "0.1.0"
+description = "What a human sees in a document, against what a machine reads out of it."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+authors = [{ name = "osint-shifu" }]
+keywords = [
+  "redaction",
+  "pdf",
+  "forensics",
+  "prompt-injection",
+  "document-analysis",
+  "hidden-text",
+  "osint",
+  "dfir",
+]
+classifiers = [
+  "Development Status :: 2 - Pre-Alpha",
+  "Environment :: Console",
+  "Intended Audience :: Information Technology",
+  "Intended Audience :: Legal Industry",
+  "License :: OSI Approved :: Apache Software License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Security",
+  "Topic :: Text Processing",
+  "Topic :: Utilities",
+]
+
+# One dependency, and the reasoning is in HANDOFF.md. pypdf is BSD-3-Clause,
+# pure Python and has no transitive dependencies. A second one has to earn its
+# place the same way, in writing.
+dependencies = ["pypdf>=5,<7"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.2,<9", "ruff>=0.6,<1"]
+
+[project.urls]
+Homepage = "https://github.com/osint-shifu/unmasker"
+Repository = "https://github.com/osint-shifu/unmasker"
+Issues = "https://github.com/osint-shifu/unmasker/issues"
+
+[project.scripts]
+unmasker = "unmasker.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/unmasker"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]

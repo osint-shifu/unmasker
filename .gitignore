@@ -1,0 +1,22 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.ruff_cache/
+.venv/
+venv/
+.vscode/
+.idea/
+.DS_Store
+.coverage
+htmlcov/
+
+# Review archives built with `git archive`: a snapshot of the repository stored
+# inside that repository is redundant the day it is made and wrong after it.
+*.zip
+
+# Specimens are the test suite here and DO belong in git - see CLAUDE.md.
+# Only genuinely private material is excluded.
+private-samples/
