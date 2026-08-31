@@ -37,6 +37,7 @@ from __future__ import annotations
 from collections import Counter
 from dataclasses import dataclass, field
 
+from .fonts import FontMetrics, load_font
 from .geometry import BLACK, Colour, Matrix, Rect
 from .tokens import InlineImage, Name, Operator, tokenize
 
@@ -94,7 +95,21 @@ IGNORED = {
 # How many operands each operator needs. A known operator that arrives short is
 # damage, and saying "not understood" about it would point the reader at the
 # wrong thing entirely.
-ARITY = {"cm": 6, "m": 2, "l": 2, "c": 6, "v": 4, "y": 4, "re": 4, "rg": 3, "k": 4, "g": 1}
+ARITY = {
+    "cm": 6,
+    "m": 2,
+    "l": 2,
+    "c": 6,
+    "v": 4,
+    "y": 4,
+    "re": 4,
+    "rg": 3,
+    "k": 4,
+    "g": 1,
+    "Td": 2,
+    "TD": 2,
+    "Tm": 6,
+}
 
 MAX_FORM_DEPTH = 12
 
@@ -117,6 +132,10 @@ class Shape:
     clip: Rect | None
     alpha: float = 1.0
     even_odd: bool = False
+    order: int = 0
+    """Position in the painting order. A rectangle drawn *before* a piece of
+    text is a background and hides nothing; the same rectangle drawn after it
+    is a redaction. Nothing else in the file distinguishes them."""
 
     @property
     def visible_bbox(self) -> Rect:
@@ -129,11 +148,58 @@ class Shape:
         return self.alpha >= 0.999
 
 
+@dataclass(frozen=True)
+class Glyph:
+    """One character, and the box it occupies on the page.
+
+    Per glyph rather than per run, because a bar that covers half a line has to
+    be reportable as covering half a line. Reporting the whole run whenever any
+    of it was touched is the kind of overstatement that costs a forensic tool
+    its credibility on the first document where a reader can see the page.
+    """
+
+    char: str
+    code: int
+    bbox: Rect
+
+
+@dataclass(frozen=True)
+class TextRun:
+    """One show-operation: its glyphs, its extent and how it was painted."""
+
+    text: str
+    glyphs: tuple[Glyph, ...]
+    bbox: Rect
+    font: str | None
+    size: float
+    render_mode: int = 0
+    fill: Colour | None = None
+    stroke: Colour | None = None
+    clip: Rect | None = None
+    order: int = 0
+    """Position in the painting order; see `Shape.order`."""
+
+    widths_estimated: bool = False
+    """True when the font declared no widths, so every extent here is a
+    default rather than a measurement. The report has to say so."""
+
+    @property
+    def is_invisible(self) -> bool:
+        """Render modes 3 and 7 paint nothing. Mode 3 is a real technique: the
+        text is in the file, selectable and searchable, and not on the screen."""
+        return self.render_mode in (3, 7)
+
+    @property
+    def visible_bbox(self) -> Rect:
+        return self.bbox.intersect(self.clip) if self.clip else self.bbox
+
+
 @dataclass
 class InterpretedPage:
     number: int
     box: Rect
     shapes: tuple[Shape, ...] = ()
+    texts: tuple[TextRun, ...] = ()
     remarks: tuple[str, ...] = ()
     counts: Counter = field(default_factory=Counter)
 
@@ -148,6 +214,17 @@ class _State:
     stroke_alpha: float = 1.0
     fill_space: str | None = "DeviceGray"
     stroke_space: str | None = "DeviceGray"
+    # Text parameters are part of the graphics state and are saved by q/Q.
+    # The text and line matrices are not: BT resets them.
+    font: FontMetrics | None = None
+    font_name: str | None = None
+    size: float = 0.0
+    char_spacing: float = 0.0
+    word_spacing: float = 0.0
+    scale: float = 1.0
+    leading: float = 0.0
+    rise: float = 0.0
+    render_mode: int = 0
 
     def copy(self) -> _State:
         return _State(**vars(self))
@@ -198,11 +275,18 @@ class _Interpreter:
     def __init__(self, box: Rect, remarks: list[str], counts: Counter) -> None:
         self.box = box
         self.shapes: list[Shape] = []
+        self.texts: list[TextRun] = []
+        self._order = 0
+        self._fonts: dict = {}
         self.remarks = remarks
         self.counts = counts
         self._unknown: set[str] = set()
 
     # -- remarks ---------------------------------------------------------
+
+    def next_order(self) -> int:
+        self._order += 1
+        return self._order
 
     def note(self, text: str) -> None:
         if text not in self.remarks:
@@ -217,8 +301,100 @@ class _Interpreter:
         stack: list[_State] = []
         pending_clip: bool | None = None
 
+        text_matrix = Matrix.IDENTITY
+        line_matrix = Matrix.IDENTITY
+
         def point(x: float, y: float) -> tuple[float, float]:
             return state.ctm.apply(x, y)
+
+        def load(name: str | None) -> FontMetrics:
+            entry = _entry(_entry(resources, "Font"), name) if name else None
+            if entry is None:
+                self.note(
+                    f"font /{name} was selected but is not in the page resources; "
+                    "the extents of its text are estimates"
+                )
+            key = id(entry) if entry is not None else ("missing", name)
+            if key not in self._fonts:
+                self._fonts[key] = load_font(entry, name)
+            return self._fonts[key]
+
+        def newline(amount: float) -> None:
+            nonlocal text_matrix, line_matrix
+            line_matrix = Matrix(1, 0, 0, 1, 0, amount).then(line_matrix)
+            text_matrix = line_matrix
+
+        def adjust(thousandths: float) -> None:
+            """A TJ number. `tx = (w0 - Tj/1000) x Tfs`, so a *negative* number
+            widens the gap - it reads backwards, and the sign decides which
+            side of a bar every kerned glyph falls on."""
+            nonlocal text_matrix
+            shift = -thousandths / 1000.0 * state.size * state.scale
+            text_matrix = Matrix(1, 0, 0, 1, shift, 0).then(text_matrix)
+
+        def show(raw: bytes) -> list[Glyph]:
+            """Place one string's glyphs and advance the pen. Returns them
+            rather than emitting, so a TJ array - which is one show operation
+            however many pieces it is written in - becomes one run."""
+            nonlocal text_matrix
+            font = state.font or load_font(None, state.font_name)
+            glyphs: list[Glyph] = []
+            for code in font.codes(raw):
+                # The text rendering matrix, rebuilt per glyph because the text
+                # matrix advances underneath it.
+                trm = (
+                    Matrix(state.size * state.scale, 0, 0, state.size, 0, state.rise)
+                    .then(text_matrix)
+                    .then(state.ctm)
+                )
+                width = font.advance(code)
+                corners = [
+                    trm.apply(x, y)
+                    for x, y in (
+                        (0, font.descent),
+                        (width, font.descent),
+                        (width, font.ascent),
+                        (0, font.ascent),
+                    )
+                ]
+                glyphs.append(
+                    Glyph(char=font.char(code), code=code, bbox=Rect.from_points(corners))
+                )
+                # Word spacing applies to byte 32, and only in a single-byte
+                # encoding - in a CID font code 32 is an ordinary glyph.
+                extra = state.word_spacing if code == 32 and font.bytes_per_code == 1 else 0.0
+                advance = (width * state.size + state.char_spacing + extra) * state.scale
+                text_matrix = Matrix(1, 0, 0, 1, advance, 0).then(text_matrix)
+
+            return glyphs
+
+        def emit(glyphs: list[Glyph]) -> None:
+            """One show operation becomes one run.
+
+            A `TJ` array is a single operation however many pieces it is
+            written in, so its glyphs are collected before this is called.
+            """
+            if not glyphs:
+                return
+            font = state.font
+            self.texts.append(
+                TextRun(
+                    text="".join(g.char for g in glyphs),
+                    glyphs=tuple(glyphs),
+                    bbox=Rect.from_points(
+                        [(g.bbox.x0, g.bbox.y0) for g in glyphs]
+                        + [(g.bbox.x1, g.bbox.y1) for g in glyphs]
+                    ),
+                    font=state.font_name,
+                    size=state.size,
+                    render_mode=state.render_mode,
+                    fill=state.fill,
+                    stroke=state.stroke,
+                    clip=state.clip,
+                    order=self.next_order(),
+                    widths_estimated=font is None or font.widths_are_estimated,
+                )
+            )
 
         for token in tokenize(data):
             if isinstance(token, InlineImage):
@@ -234,6 +410,7 @@ class _Interpreter:
             op = token.value
             self.counts[op] += 1
             nums = _numbers(operands)
+            floats = [v for v in operands if isinstance(v, float)]
 
             need = ARITY.get(op)
             if need is not None and (nums is None or len(nums) < need):
@@ -315,6 +492,60 @@ class _Interpreter:
             elif op == "Do":
                 self._do(operands, state, resources, chain)
 
+            # -- text ---------------------------------------------------
+            elif op == "BT":
+                text_matrix = line_matrix = Matrix.IDENTITY
+            elif op == "Tf":
+                if operands and isinstance(operands[0], Name):
+                    state.font_name = operands[0].value
+                    state.font = load(state.font_name)
+                state.size = floats[-1] if floats else 0.0
+            elif op == "Td":
+                line_matrix = Matrix(1, 0, 0, 1, floats[-2], floats[-1]).then(line_matrix)
+                text_matrix = line_matrix
+            elif op == "TD":
+                state.leading = -floats[-1]
+                line_matrix = Matrix(1, 0, 0, 1, floats[-2], floats[-1]).then(line_matrix)
+                text_matrix = line_matrix
+            elif op == "Tm":
+                text_matrix = line_matrix = Matrix(*floats[-6:])
+            elif op == "T*":
+                newline(-state.leading)
+            elif op == "TL" and floats:
+                state.leading = floats[-1]
+            elif op == "Tc" and floats:
+                state.char_spacing = floats[-1]
+            elif op == "Tw" and floats:
+                state.word_spacing = floats[-1]
+            elif op == "Tz" and floats:
+                state.scale = floats[-1] / 100.0
+            elif op == "Ts" and floats:
+                state.rise = floats[-1]
+            elif op == "Tr" and floats:
+                state.render_mode = int(floats[-1])
+            elif op == "Tj":
+                if operands and isinstance(operands[-1], bytes):
+                    emit(show(operands[-1]))
+            elif op == "TJ":
+                if operands and isinstance(operands[-1], list):
+                    collected: list[Glyph] = []
+                    for item in operands[-1]:
+                        if isinstance(item, bytes):
+                            collected += show(item)
+                        elif isinstance(item, float):
+                            adjust(item)
+                    emit(collected)
+            elif op == "'":
+                newline(-state.leading)
+                if operands and isinstance(operands[-1], bytes):
+                    emit(show(operands[-1]))
+            elif op == '"':
+                if len(floats) >= 2:
+                    state.word_spacing, state.char_spacing = floats[0], floats[1]
+                newline(-state.leading)
+                if operands and isinstance(operands[-1], bytes):
+                    emit(show(operands[-1]))
+
             elif op in IGNORED:
                 pass
             else:
@@ -360,6 +591,7 @@ class _Interpreter:
                     clip=state.clip,
                     alpha=state.fill_alpha,
                     even_odd=FILL_OPS[op],
+                    order=self.next_order(),
                 )
             )
         if op in STROKE_OPS:
@@ -372,6 +604,7 @@ class _Interpreter:
                     colour=state.stroke,
                     clip=state.clip,
                     alpha=state.stroke_alpha,
+                    order=self.next_order(),
                 )
             )
 
@@ -386,6 +619,7 @@ class _Interpreter:
             colour=None,
             clip=state.clip,
             alpha=state.fill_alpha,
+            order=self.next_order(),
         )
 
     def _apply_extgstate(self, state: _State, operands, resources) -> None:
@@ -471,6 +705,7 @@ def interpret_stream(
         number=number,
         box=box,
         shapes=tuple(machine.shapes),
+        texts=tuple(machine.texts),
         remarks=tuple(remarks),
         counts=counts,
     )

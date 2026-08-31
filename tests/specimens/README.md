@@ -20,6 +20,7 @@ which RFC 2606 reserves for the purpose.
 | [`pdf/chrome-print-css-overlay.pdf`](pdf/chrome-print-css-overlay.md) | Skia/PDF m152 (headless Chrome) | four black bars | the four values, intact |
 | [`pdf/libreoffice-writer-properly-redacted.pdf`](pdf/libreoffice-writer-properly-redacted.md) | LibreOffice 24.2 Writer | four black bars | nothing — control |
 | [`pdf/flattened-to-image.pdf`](pdf/flattened-to-image.md) | Ghostscript `pdfimage24` | four black bars | no text layer at all — control |
+| [`pdf/libreoffice-writer-partial-bars.pdf`](pdf/libreoffice-writer-partial-bars.md) | LibreOffice 24.2 Writer | four bars dragged too short | the covered words, and only those |
 | [`docx/libreoffice-writer-hidden-characters.docx`](docx/libreoffice-writer-hidden-characters.md) | LibreOffice 24.2 Writer | four ordinary lines | a zero-width space, an override, a hidden instruction, a homoglyph |
 
 The first two are failed redactions and must be found — by tier 1, which is not
@@ -43,8 +44,12 @@ a builder still runs, not as part of the test suite.
 
 Named here so their absence is not mistaken for coverage:
 
-- **A bar that only partly covers its text.** Every bar here covers its value
-  completely. The geometry edge — what counts as covered — is untested.
+- **A bar drawn across the middle of a word**, so that one glyph is half
+  covered. `libreoffice-writer-partial-bars.pdf` closed the partial-coverage
+  gap, but every bar in it stops in a gap between words; the genuinely
+  ambiguous edge is still untested.
+- **Rotated or vertically-set text.** Lines are grouped by the bottom of the
+  glyph box, which is exact for horizontal text and wrong for anything else.
 - **Producers not on this machine.** Acrobat and Word draw their own way, and
   LibreOffice and Chrome already disagree with each other.
 - **Redaction by image, annotation or clipping path**, rather than a filled

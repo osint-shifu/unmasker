@@ -172,15 +172,55 @@ def test_json_on_a_clean_file_distinguishes_it_from_an_unsearched_one(capsys, tm
 # --------------------------------------------------------------------------
 
 
-def test_the_failed_redaction_specimen_reports_no_tier_two_findings(capsys):
-    """It hides its text under a rectangle, not with invisible characters.
+def test_the_failed_redaction_specimen_is_reported_end_to_end(capsys):
+    """The whole point of the tool, from the command line.
 
-    Tier 2 must stay quiet on it, and say that it searched. The rectangle is
-    tier 1 and is not built yet - a green run here is not a clean document.
+    This test used to assert exit 0 and carried a note that a green run here
+    was not a clean document, because tier 1 did not exist. It does now.
     """
     code, out, _ = run(capsys, str(SPECIMENS / "libreoffice-writer-black-bars.pdf"))
+    assert code == 1
+    assert "w.testowa@example.org" in out
+    assert "█" in out
+    assert "searched" in out.lower()
+
+
+def test_the_properly_redacted_control_still_exits_clean(capsys):
+    """Same bars, same coordinates, text removed. The tool must stay silent,
+    and must still say that it looked."""
+    code, out, _ = run(capsys, str(SPECIMENS / "libreoffice-writer-properly-redacted.pdf"))
     assert code == 0
     assert "searched" in out.lower()
+    assert "w.testowa" not in out
+
+
+def test_a_covered_text_finding_reaches_json_with_both_readings(capsys):
+    code, out, _ = run(capsys, str(SPECIMENS / "chrome-print-css-overlay.pdf"), "--json")
+    assert code == 1
+    doc = json.loads(out)
+    covered = [f for f in doc["findings"] if f["detector"] == "covered-text"]
+    assert len(covered) == 4
+    assert sorted(f["machine_reads"].strip() for f in covered) == sorted(
+        [
+            "+48 601 000 000",
+            "Wanda Testowa-Przyklad",
+            "ul. Przykladowa 12/3, 00-001 Warszawa",
+            "w.testowa@example.org",
+        ]
+    )
+    assert all(f["location"]["page"] == 1 for f in covered)
+
+
+def test_the_partial_specimen_reports_only_the_covered_words(capsys):
+    code, out, _ = run(capsys, str(SPECIMENS / "libreoffice-writer-partial-bars.pdf"), "--json")
+    assert code == 1
+    doc = json.loads(out)
+    reads = " ".join(
+        f["machine_reads"] for f in doc["findings"] if f["detector"] == "covered-text"
+    )
+    assert "Wanda" in reads
+    assert "Testowa-Przyklad" not in reads
+    assert "Warszawa" not in reads
 
 
 def test_the_docx_specimen_reports_all_four_kinds(capsys):

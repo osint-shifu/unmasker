@@ -15,12 +15,21 @@ python3 tests/specimens/sources/build_libreoffice_writer.py \
 ```
 
 The `--remove-text` pass replaces each redacted value with a run of U+00A0 of
-the same length before the bars go on. The values are set in Liberation Mono,
-where every glyph including the space has the same advance, so the layout does
-not shift by a hair. The bars land on coordinates measured from the *unredacted*
-pass, which is what makes this a true pair with
+the same length before the bars go on, and the bars land on coordinates measured
+from the *unredacted* pass. That is what makes this a true pair with
 `libreoffice-writer-black-bars.pdf`: the two files differ in whether the text is
-still there, and in nothing else.
+still there, and in nothing else — verified, the four bars are byte-for-byte the
+same geometry.
+
+> **Corrected 2026-08-31.** This paragraph used to add that the values were set
+> in Liberation Mono, so replacing them character-for-character could not shift
+> the layout. That was wrong. The `Field` style names Liberation Mono but the
+> document declares no font face for it, so LibreOffice substitutes Liberation
+> Serif and the values are not monospaced at all — measured through poppler, the
+> advance runs from 4.95 to 6.05 points on one line. The claim was never
+> load-bearing here, because each value ends its line and the bars come from the
+> first pass either way, but it was stated as fact and it was not one.
+> `libreoffice-writer-partial-bars.md` records how it came to light.
 
 ## What a human sees
 

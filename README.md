@@ -15,14 +15,18 @@ what it can show.
 unmasker leaked.pdf
 ```
 
-> **Status: tier 2 works. Tier 1 does not exist yet.**
+> **Status: it does the thing on the tin.**
 >
-> `unmasker` finds invisible characters today - zero-width characters, bidi
-> overrides, plane-14 tag characters and mixed-script words - in PDF, DOCX and
-> any text file. The rectangle-over-text detector, which is the one in the
-> example above, is not built. A clean run means the detectors that exist found
-> nothing, and the report says exactly that rather than calling the document
-> clean.
+> Text under a filled shape, reported per character rather than per line, so a
+> bar dragged too short is reported as covering exactly what it covers. Text
+> drawn in a render mode that paints nothing. Zero-width characters, bidi
+> overrides, plane-14 tag characters and mixed-script words, in PDF, DOCX and
+> any text file.
+>
+> Not yet: tracked changes, metadata, text in the colour of its background,
+> text positioned off the page, and OCR. A clean run means the detectors that
+> exist found nothing, and the report says that rather than calling the
+> document clean.
 >
 > See [`HANDOFF.md`](HANDOFF.md) for what this is, what was decided and why, and
 > what has been verified against real files.

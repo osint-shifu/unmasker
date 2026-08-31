@@ -27,6 +27,7 @@ from pathlib import Path
 
 from . import __version__
 from .findings import Finding
+from .pdf.detectors import detect as detect_drawn
 from .readers import UnreadableFile, read
 from .report import Style, render
 from .text.invisible import scan_text
@@ -49,6 +50,13 @@ def collect(extraction) -> list[Finding]:
                     location=dataclasses.replace(finding.location, page=unit.page),
                 )
             found.append(finding)
+
+    # Tier 1, for readers that can see what is painted. A page with a bar over
+    # its text *and* a zero-width character in it has two findings, and neither
+    # is allowed to suppress the other.
+    for painted in extraction.drawn:
+        found.extend(detect_drawn(painted))
+
     return sorted(found, key=lambda f: f.location.sort_key)
 
 

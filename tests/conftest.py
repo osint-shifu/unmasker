@@ -25,6 +25,17 @@ def page_of(name: str, index: int = 0):
     return PdfReader(str(SPECIMENS / "pdf" / name)).pages[index]
 
 
+def font_of(specimen: str, resource: str, index: int = 0):
+    """One font dictionary out of a committed specimen, by resource name.
+
+    Real font dictionaries rather than stubs, because the two specimens carry
+    the two width tables that matter - `/Widths` and `/W` - and a stub would
+    only prove the parser agrees with whoever wrote the stub.
+    """
+    page = page_of(specimen, index)
+    return page["/Resources"]["/Font"][resource].get_object()
+
+
 class Stub(dict):
     """A dictionary that behaves enough like a pypdf object to be resolved."""
 

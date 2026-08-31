@@ -29,6 +29,8 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import html
+import re
 import shutil
 import subprocess
 import sys
@@ -99,11 +101,16 @@ def fodt(bars: list[dict] | None = None, remove_text: bool = False) -> str:
     shape in front of the text instead of behind it, which is precisely the
     real-world failure: the text is never removed, only covered.
 
-    With `remove_text`, the redacted values are replaced by spaces before the
-    bars go on. That is a *correct* redaction, and it is here so the specimen
-    set can tell the two apart. The values are set in Liberation Mono, where a
-    space has the same advance as any other glyph, so the layout does not move
-    and the two files differ only in whether the text is still there.
+    With `remove_text`, the redacted values are replaced by no-break spaces
+    before the bars go on. That is a *correct* redaction, and it is here so the
+    specimen set can tell the two apart. Each value ends its line and the bars
+    are placed from the measurements of the unredacted pass, so the two files
+    differ only in whether the text is still there.
+
+    (An earlier version of this docstring claimed the values were monospaced,
+    so the substitution could not move anything. They are not: the Field style
+    names Liberation Mono but nothing declares that font face, and LibreOffice
+    substitutes Liberation Serif.)
     """
     shapes = ""
     for b in bars or []:
@@ -154,6 +161,97 @@ def fodt(bars: list[dict] | None = None, remove_text: bool = False) -> str:
  </office:text></office:body>
 </office:document>
 """
+
+
+def word_boxes(pdf: Path) -> list[dict]:
+    """Every word on page 1 and its box, as *poppler* measures it.
+
+    Deliberately not this project's own interpreter. A fixture measured with
+    the tool under test proves only that the tool agrees with itself, which was
+    never in doubt. `pdftotext` is a wholly separate implementation, so a bar
+    placed on its numbers is an independent statement about where the text is.
+
+    Poppler reports points from the top-left of the page, the same origin and
+    unit ODF wants for a page-anchored shape - checked against the
+    full-coverage specimen, whose email bar sits at 163.3pt and whose email
+    word poppler puts at 163.0998.
+    """
+    out = subprocess.run(
+        ["pdftotext", "-bbox", str(pdf), "-"],
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=120,
+    ).stdout
+    pattern = (
+        r'<word xMin="([\d.]+)" yMin="([\d.]+)" '
+        r'xMax="([\d.]+)" yMax="([\d.]+)">([^<]*)</word>'
+    )
+    return [
+        {
+            "x0": float(m[1]),
+            "y0": float(m[2]),
+            "x1": float(m[3]),
+            "y1": float(m[4]),
+            "text": html.unescape(m[5]),
+        }
+        for m in re.finditer(pattern, out)
+    ]
+
+
+def _run_of(words: list[dict], pieces: list[str]) -> list[dict] | None:
+    """The consecutive words spelling `pieces`, all on one line."""
+    for start in range(len(words) - len(pieces) + 1):
+        window = words[start : start + len(pieces)]
+        same_line = len({round(w["y0"], 1) for w in window}) == 1
+        if [w["text"] for w in window] == pieces and same_line:
+            return window
+    return None
+
+
+def partial_bars(pdf: Path) -> list[dict]:
+    """Bars dragged too short: each stops in the gap before the last word.
+
+    Stopping in a *gap* rather than after a character count is what makes the
+    specimen checkable without per-glyph geometry. No word straddles a bar
+    edge, so which words are covered is settled by poppler's boxes alone, and a
+    detector's answer can be compared against something this project did not
+    compute.
+    """
+    words = word_boxes(pdf)
+    bars: list[dict] = []
+    for _label, value, redact in FIELDS:
+        if not redact:
+            continue
+        pieces = value.split()
+        run = _run_of(words, pieces)
+        if run is None:
+            raise RuntimeError(f"poppler did not report the words of {value!r}")
+
+        if len(pieces) >= 2:
+            covered = pieces[:-1]
+            end = (run[-2]["x1"] + run[-1]["x0"]) / 2.0
+        else:
+            # One word, so there is no gap to stop in. This value stays fully
+            # covered, and the provenance says so.
+            covered = pieces
+            end = run[-1]["x1"] + 4.0
+
+        x0 = run[0]["x0"] - 2.0
+        top = min(w["y0"] for w in run) - 1.0
+        bottom = max(w["y1"] for w in run) + 1.0
+        bars.append(
+            {
+                "x": x0 * CM_PER_PT,
+                "y": top * CM_PER_PT,
+                "w": (end - x0) * CM_PER_PT,
+                "h": (bottom - top) * CM_PER_PT,
+                "z": 10 + len(bars),
+                "covers": " ".join(covered),
+                "leaves": " ".join(pieces[len(covered) :]),
+            }
+        )
+    return bars
 
 
 def export(fodt_text: str, workdir: Path, stem: str) -> Path:
@@ -222,7 +320,14 @@ def bars_for(frags: list[tuple[str, float, float, float]]) -> list[dict]:
         # Where the value starts inside the fragment. The label and its padding
         # sit in the same run, so shift right by their measured share.
         offset = text.index(value)
-        char_w = size * 0.60  # Liberation Mono advance width, 0.6 em
+        # An estimate, and a loose one: the "Field" style names Liberation
+        # Mono but the document declares no font face for it, so LibreOffice
+        # substitutes Liberation Serif and the values are not monospaced at
+        # all. Measured against poppler the real advance runs from 4.95 to
+        # 6.05 points. The generous padding below is what makes the bars cover
+        # their values in spite of it - which is exactly the kind of estimate
+        # error a fixture can hide, so --partial does not rely on this at all.
+        char_w = size * 0.60
         x_pt = x + offset * char_w
         w_pt = len(value) * char_w
 
@@ -251,6 +356,14 @@ def main() -> int:
     ap.add_argument("--workdir", type=Path, default=None)
     ap.add_argument("--keep", action="store_true", help="keep the intermediate files")
     ap.add_argument(
+        "--partial",
+        action="store_true",
+        help=(
+            "draw each bar too short, leaving the last few characters of every "
+            "value legible - the box-dragged-too-short failure"
+        ),
+    )
+    ap.add_argument(
         "--remove-text",
         action="store_true",
         help="build the control instead: bars drawn, text genuinely gone",
@@ -266,9 +379,14 @@ def main() -> int:
         frags = measure(clean)
         print(f"        {len(frags)} positioned fragments on page 1")
 
-        bars = bars_for(frags)
-        for b in bars:
-            print(f"        bar over {b['covers']!r} at {b['x']:.2f},{b['y']:.2f}cm")
+        if args.partial:
+            bars = partial_bars(clean)
+            for b in bars:
+                print(f"        bar over {b['covers']!r}, leaving {b['leaves']!r}")
+        else:
+            bars = bars_for(frags)
+            for b in bars:
+                print(f"        bar over {b['covers']!r} at {b['x']:.2f},{b['y']:.2f}cm")
 
         what = "bars in place, text removed" if args.remove_text else "the bars in place"
         print(f"pass 2: exporting with {what}")
