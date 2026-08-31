@@ -15,9 +15,17 @@ what it can show.
 unmasker leaked.pdf
 ```
 
-> **Status: designed, not built.** Nothing is implemented yet. See
-> [`HANDOFF.md`](HANDOFF.md) for what this is, what was decided and why, and what
-> has already been verified against real files.
+> **Status: tier 2 works. Tier 1 does not exist yet.**
+>
+> `unmasker` finds invisible characters today - zero-width characters, bidi
+> overrides, plane-14 tag characters and mixed-script words - in PDF, DOCX and
+> any text file. The rectangle-over-text detector, which is the one in the
+> example above, is not built. A clean run means the detectors that exist found
+> nothing, and the report says exactly that rather than calling the document
+> clean.
+>
+> See [`HANDOFF.md`](HANDOFF.md) for what this is, what was decided and why, and
+> what has been verified against real files.
 
 ## Why
 
