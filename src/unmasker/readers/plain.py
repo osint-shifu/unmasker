@@ -20,7 +20,7 @@ def read_plain(path: Path) -> Extraction:
     if b"\x00" in raw:
         raise UnreadableFile(
             f"{path.name} contains null bytes and is not text; "
-            "unmasker reads PDF, DOCX and text files"
+            "unmasker reads PDF, DOCX, ODT, XLSX, ODS and text files"
         )
 
     try:

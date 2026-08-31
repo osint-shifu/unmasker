@@ -66,7 +66,11 @@ def read_docx(path: Path) -> Extraction:
         if "word/document.xml" not in names:
             hint = ""
             if "content.xml" in names:
-                hint = "; it looks like an OpenDocument file, which unmasker does not read yet"
+                # It has been read since the ODF reader landed. A message that
+                # tells a user the tool cannot do something it can is disproved
+                # by the first thing they try, and everything else on the
+                # screen loses credibility with it.
+                hint = "; it looks like an OpenDocument file - pass it to unmasker directly"
             raise UnreadableFile(f"{path.name} is a zip but not a Word document{hint}")
 
         units: list[TextUnit] = []
