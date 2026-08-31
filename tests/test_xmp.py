@@ -229,8 +229,10 @@ def test_tool_fields_that_disagree_are_not_reported():
     assert meta.where("xmp:CreatorTool", "XMP").value.startswith("LibreOffice/")
     found = detect(meta, VISIBLE)
     assert not any("CreatorTool" in f.summary for f in found)
-    assert not any(f.detector == "metadata-conflict" and "Creator" in f.summary
-                   and "Title" not in f.summary for f in found)
+    assert not any(
+        f.detector == "metadata-conflict" and "Creator" in f.summary and "Title" not in f.summary
+        for f in found
+    )
 
 
 # --------------------------------------------------------------------------
