@@ -84,10 +84,17 @@ PACKET = [
     f"-XMP-xmpMM:OriginalDocumentID={ORIGINAL_ID}",
     f"-XMP-xmpMM:DerivedFromDocumentID={DERIVED_FROM}",
     "-XMP-xmp:CreatorTool=LibreOffice/24.2.7.2$Linux_X86_64",
-    "-XMP-xmpMM:HistoryAction=saved",
-    "-XMP-xmpMM:HistorySoftwareAgent=Acrobat Distiller 24.0 (Windows)",
-    "-XMP-xmpMM:HistoryWhen=2024-04-19T16:41:00+02:00",
-    "-XMP-xmpMM:HistoryChanged=/metadata",
+    # Two events, from two applications. A history with one entry never shows
+    # whether the sequence is read as a sequence, and a real file's trail is
+    # almost always longer than one.
+    "-XMP-xmpMM:HistoryAction=created",
+    "-XMP-xmpMM:HistorySoftwareAgent=Adobe InDesign 19.0 (Macintosh)",
+    "-XMP-xmpMM:HistoryWhen=2024-03-11T14:02:00+01:00",
+    "-XMP-xmpMM:HistoryChanged=/",
+    "-XMP-xmpMM:HistoryAction+=saved",
+    "-XMP-xmpMM:HistorySoftwareAgent+=Acrobat Distiller 24.0 (Windows)",
+    "-XMP-xmpMM:HistoryWhen+=2024-04-19T16:41:00+02:00",
+    "-XMP-xmpMM:HistoryChanged+=/metadata",
 ]
 
 

@@ -4,7 +4,7 @@ The Info dictionary was cleaned. The XMP packet was not. Anybody who checks the
 obvious place sees a tidy file; everything that was supposed to go is still in
 the other half of it.
 
-- 16 177 bytes, `sha256:c24d0b0e99f5e1a7…`
+- 16 445 bytes, `sha256:b84c6e2b0af8713f…`
 - page and Info dictionary by LibreOffice 24.2; XMP packet and scrub by
   exiftool 12.76
 
@@ -54,7 +54,7 @@ No author. No subject. No keywords. It looks like a file somebody cleaned.
 | `Iptc4xmpCore:CreatorContactInfo/CiEmailWork` | `h.nowak@example.org` |
 | `xmpMM:OriginalDocumentID` | the document this one was made from |
 | `xmpMM:DerivedFrom/documentID` | a document this one was derived from |
-| `xmpMM:History` | `saved` by `Acrobat Distiller 24.0 (Windows)`, 2024-04-19 |
+| `xmpMM:History` | `created` by `Adobe InDesign 19.0 (Macintosh)`, 2024-03-11; then `saved` by `Acrobat Distiller 24.0 (Windows)`, 2024-04-19 |
 | `xmp:CreatorTool` | `LibreOffice/24.2.7.2$Linux_X86_64` |
 
 Nine findings from a file whose Info dictionary looks clean.
@@ -88,11 +88,21 @@ constantly — a PDF written by one application and distilled by another says
 both truthfully. They are a listed pair precisely so that the rule suppressing
 them is a rule and not an omission.
 
+## The trail
+
+`xmpMM:History` here has two entries, from two applications: created in
+InDesign in March, distilled by Acrobat in April. One entry never shows whether
+a sequence is read *as* a sequence, and a real file's trail is almost always
+longer than one — read out of order it would say the file was created after it
+was distilled.
+
+That trail is one finding, not two. Who has touched a file and when is one fact
+about the file, the same rule the DOCX and ODF revision histories follow.
+
 ## What it does not carry
 
 - **A packet written in attribute form**, which is how Adobe writes them. The
-  parser handles it and only a synthetic test exercises it.
-- **A multi-event history.** This one has a single event; two-event histories
-  are covered synthetically.
+  parser handles it and only a synthetic test exercises it; exiftool writes
+  element form and offers no way to ask for the other.
 - **XMP in anything but a PDF.** DOCX, JPEG and TIFF carry packets too, and
   nothing here reads them.

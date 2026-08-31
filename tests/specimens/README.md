@@ -73,13 +73,14 @@ Named here so their absence is not mistaken for coverage:
 - **Text outside the MediaBox.** LibreOffice refuses to emit it, so the
   off-page case is represented only by a CropBox smaller than the MediaBox.
   Another producer is needed for the other half.
-- **A true PDF shading (`sh`) or a tiling pattern behind text.**
-  `text-on-an-image.pdf` covers the picture case; LibreOffice renders a
-  gradient as dozens of solid strips, which the existing machinery reads
-  correctly, so a producer that emits `sh` is still needed for that half.
-- **An XMP packet written in attribute form**, which is how Adobe writes them,
-  and a history with more than one event. Both are handled and only synthetic
-  tests exercise them.
+- **A tiling pattern behind text.** `text-on-an-image.pdf` covers the picture
+  case; a pattern fill is the other way a background becomes unreadable.
+- **An XMP packet written in attribute form**, which is how Adobe writes them.
+  Handled, and only a synthetic test exercises it: exiftool writes element form
+  and offers no way to ask for the other.
+- **A true PDF shading.** Both LibreOffice and Chrome flatten a gradient before
+  it reaches the file — LibreOffice into dozens of solid strips, Chrome into a
+  single fill — so no producer here emits `sh` at all.
 - **XMP outside a PDF.** DOCX, JPEG and TIFF carry packets too.
 - **Rotated or vertically-set text.** Lines are grouped by the bottom of the
   glyph box, which is exact for horizontal text and wrong for anything else.
