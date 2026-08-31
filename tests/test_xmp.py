@@ -169,10 +169,27 @@ def test_the_history_is_read_as_events_rather_than_flattened_fields():
 
 def test_the_history_becomes_one_finding_not_one_per_event():
     meta = meta_of()
+    assert len(meta.history) == 2, "the specimen carries a trail, not a single event"
     found = [f for f in detect(meta, VISIBLE) if f.detector == "revision-history"]
     assert len(found) == 1
     assert found[0].basis is Basis.SELF_REPORTED
     assert "Acrobat Distiller" in found[0].machine_reads
+
+
+def test_the_history_events_come_back_in_the_order_the_file_lists_them():
+    """A trail is a sequence. Read out of order it says the file was created
+    after it was distilled."""
+    events = meta_of().history
+    assert [e.action for e in events] == ["created", "saved"]
+    assert "InDesign" in events[0].software
+    assert "Distiller" in events[1].software
+
+
+def test_both_applications_are_named_in_the_finding():
+    (found,) = [f for f in detect(meta_of(), VISIBLE) if f.detector == "revision-history"]
+    assert "InDesign" in found.machine_reads
+    assert "Distiller" in found.machine_reads
+    assert "2 events" in found.summary
 
 
 def test_a_file_with_no_history_gets_no_history_finding():
