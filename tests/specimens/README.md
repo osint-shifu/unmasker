@@ -26,6 +26,7 @@ which RFC 2606 reserves for the purpose.
 | [`docx/libreoffice-writer-tracked-changes.docx`](docx/libreoffice-writer-tracked-changes.md) | LibreOffice 24.2 Writer | a settled figure of 90,000 EUR | the 250,000 EUR it replaced, a deleted sentence, and a candid comment |
 | [`docx/libreoffice-writer-metadata-leak.docx`](docx/libreoffice-writer-metadata-leak.md) | LibreOffice 24.2 Writer | one anonymous sentence | two people, a client, a codename and a home directory |
 | [`pdf/libreoffice-writer-metadata-leak.pdf`](pdf/libreoffice-writer-metadata-leak.md) | LibreOffice 24.2 Writer | the same sentence | the same leak, minus what the PDF export drops |
+| [`pdf/xmp-survives-the-scrub.pdf`](pdf/xmp-survives-the-scrub.md) | LibreOffice 24.2, then exiftool 12.76 | an Info dictionary that looks cleaned | an XMP packet that still holds all of it |
 
 The first two are failed redactions. The next two must not be reported, and for
 different reasons: one was redacted correctly, the other has nothing to search.
@@ -41,9 +42,11 @@ have a partial idea of what metadata is.
 
 ## Rebuilding them
 
-`sources/` holds the builders. They need `soffice`, `google-chrome` and `gs` on
-`PATH`, and they write the PDF through those tools rather than emitting PDF
-operators directly — which is the point. See each specimen's `.md` for the exact
+`sources/` holds the builders. They need `soffice`, `google-chrome`, `gs`,
+`pdftotext` and `exiftool` on `PATH`, and they write each file through those
+tools rather than emitting its bytes directly — which is the point. Where a
+measurement is needed, it comes from poppler rather than from this project's
+own code, for the same reason. See each specimen's `.md` for the exact
 command.
 
 The committed PDFs are the artefacts under test. Rebuilding produces a file that
@@ -65,6 +68,10 @@ Named here so their absence is not mistaken for coverage:
 - **Text hidden behind a shading or a pattern.** `low-contrast-text` reports
   nothing when it cannot read the background colour, which is the honest answer
   and also an untested one.
+- **An XMP packet written in attribute form**, which is how Adobe writes them,
+  and a history with more than one event. Both are handled and only synthetic
+  tests exercise them.
+- **XMP outside a PDF.** DOCX, JPEG and TIFF carry packets too.
 - **Rotated or vertically-set text.** Lines are grouped by the bottom of the
   glyph box, which is exact for horizontal text and wrong for anything else.
 - **Producers not on this machine.** Acrobat and Word draw their own way, and

@@ -37,6 +37,11 @@ unmasker leaked.pdf
 > note, not a finding - every PDF has a producer, and a tool that failed every
 > document on that would be no gate at all.
 >
+> And in a PDF's XMP packet, which is the *second* place it states its
+> metadata: what a scrub of the Info dictionary left behind, the trail of
+> applications that have touched the file, and every place the two halves
+> disagree about what the file is.
+>
 > Not yet: OCR, and the containers `filetrail` reads that this does not. A
 > clean run means the detectors that exist found nothing, and the report says
 > that rather than calling the document clean.

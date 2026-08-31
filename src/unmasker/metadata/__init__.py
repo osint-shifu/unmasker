@@ -44,6 +44,8 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from xml.etree import ElementTree
 
+from .xmp import parse_xmp
+
 __all__ = ["Field", "Metadata", "read_ooxml", "read_pdf"]
 
 # Roles, per container. A name absent from these tables is `other`: read and
@@ -109,6 +111,22 @@ class Metadata:
     fields: tuple[Field, ...] = ()
     remarks: tuple[str, ...] = field(default_factory=tuple)
 
+    history: tuple = ()
+    """`xmpMM:History` events, for files that carry an XMP packet. An edit
+    trail rather than a property: who touched a file and when is one fact about
+    the file, so it is kept whole rather than flattened into fields."""
+
+    def where(self, name: str, part: str) -> Field | None:
+        """The field with this exact name, from this part of the file.
+
+        Needed because a PDF states its metadata twice and the two do not have
+        to agree - which is the most useful thing metadata reading has to say.
+        """
+        for entry in self.fields:
+            if entry.name.lower() == name.lower() and entry.part == part:
+                return entry
+        return None
+
     def get(self, name: str) -> Field | None:
         for entry in self.fields:
             if entry.name.lower() == name.lower():
@@ -164,17 +182,31 @@ def read_pdf(reader) -> Metadata:
             value = _pdf_date(value)
         found.append(Field(name=name, value=value, part="/Info", role=role))
 
-    remarks = []
-    try:
-        if reader.xmp_metadata is not None:
-            remarks.append(
-                "the file also carries XMP metadata, which unmasker does not "
-                "read yet; it can hold earlier filenames and document histories"
-            )
-    except Exception:
-        pass
+    packet, remarks = _xmp_packet(reader)
+    history: tuple = ()
+    if packet:
+        xmp_fields, events, problems = parse_xmp(packet)
+        found.extend(xmp_fields)
+        history = tuple(events)
+        remarks.extend(problems)
 
-    return Metadata(fields=tuple(found), remarks=tuple(remarks))
+    return Metadata(fields=tuple(found), remarks=tuple(remarks), history=history)
+
+
+def _xmp_packet(reader) -> tuple[bytes, list[str]]:
+    """The raw XMP bytes, read straight off the catalogue.
+
+    The raw packet rather than pypdf's parsed view of it, because the packet is
+    RDF and states one thing four different ways; the parsing that matters is
+    in `xmp.py` and needs the XML, not a summary of it.
+    """
+    try:
+        stream = reader.trailer["/Root"].get("/Metadata")
+        if stream is None:
+            return b"", []
+        return stream.get_object().get_data(), []
+    except Exception as exc:
+        return b"", [f"the XMP packet could not be read: {exc}"]
 
 
 def _parse(archive: zipfile.ZipFile, member: str):

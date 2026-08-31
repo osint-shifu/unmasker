@@ -18,7 +18,16 @@ how leaked documents get attributed.
 username and often a client name, all from one string, so it gets its own line
 rather than being one more undisclosed value.
 
-**`metadata-conflict`** — the file contradicting itself about its own dates.
+**`metadata-conflict`** — the file contradicting itself. A PDF states its
+metadata twice, in the Info dictionary and in an XMP packet, and nothing makes
+the two agree; tools that "remove metadata" routinely clear one and leave the
+other. Two timestamps in the wrong order are the same kind of statement. Both
+are one question - *which of these does the file mean?* - so both are one
+detector.
+
+**`revision-history`** — the `xmpMM:History` trail: which applications have
+touched the file, and when. One finding for the file, the same rule the DOCX
+tracked-change history follows, arriving in a different container.
 
 Everything here is `SELF_REPORTED`. That is what the class is for: a name in a
 .docx is whatever that copy of Word was configured to say, and the report says
@@ -68,6 +77,26 @@ def _timestamp(value: str) -> datetime | None:
         return None
 
 
+def _significance(name: str) -> str:
+    """What a field means, where the name alone would not tell a reader.
+
+    A UUID reported as "a value the document does not show" is true and flat.
+    `xmpMM:OriginalDocumentID` is the file recording that it came from another
+    document, which is a different sentence and a far more useful one - and it
+    is the same principle as everywhere else here: the name of a field is
+    evidence, so use it.
+    """
+    lowered = name.lower()
+    if "originaldocumentid" in lowered:
+        return (
+            "; this identifier names the document this one was made from, and "
+            "survives across saves that change everything else"
+        )
+    if "derivedfrom" in lowered:
+        return "; this identifier names a document this one was derived from"
+    return ""
+
+
 def undisclosed(metadata: Metadata, text: str) -> list[Finding]:
     """Content-field values the document never shows."""
     findings = []
@@ -81,7 +110,7 @@ def undisclosed(metadata: Metadata, text: str) -> list[Finding]:
                 basis=Basis.SELF_REPORTED,
                 summary=(
                     f"the {entry.name} field of {entry.part} holds a value the "
-                    "document does not show anywhere in its text"
+                    "document does not show anywhere in its text" + _significance(entry.name)
                 ),
                 human_sees="",
                 machine_reads=value,
@@ -151,6 +180,91 @@ def conflicts(metadata: Metadata, text: str) -> list[Finding]:
     return findings
 
 
+# What the Info dictionary calls a thing, against what XMP calls it. Taken from
+# the PDF specification's XMP mapping and not from the names: `/Subject` maps
+# onto `dc:description`, while `dc:subject` is `/Keywords`. Pairing these by
+# name would compare two fields that mean different things and report a
+# conflict that is not one.
+EQUIVALENT = (
+    ("Author", "dc:creator"),
+    ("Title", "dc:title"),
+    ("Subject", "dc:description"),
+    ("Keywords", "pdf:Keywords"),
+    ("CreationDate", "xmp:CreateDate"),
+    ("ModDate", "xmp:ModifyDate"),
+    # Listed so the tool-role guard below has something to guard. These two
+    # disagree in enormous numbers of ordinary files - a PDF written by one
+    # application and distilled by another says both, truthfully - and a
+    # detector that fired on them would bury the pairs that matter.
+    ("Creator", "xmp:CreatorTool"),
+    ("Producer", "pdf:Producer"),
+)
+
+
+def disagreements(metadata: Metadata, text: str) -> list[Finding]:
+    """The Info dictionary and the XMP packet stating different things.
+
+    Only where *both* say something. XMP holding an author the Info dictionary
+    lacks is XMP holding more, not the file contradicting itself, and that is
+    already `undisclosed-metadata`.
+
+    Tool fields are left out. `/Creator` and `xmp:CreatorTool` disagree in
+    enormous numbers of perfectly ordinary files, and a detector that fired on
+    those would drown the one that matters.
+    """
+    findings = []
+    for info_name, xmp_name in EQUIVALENT:
+        here = metadata.where(info_name, "/Info")
+        there = metadata.where(xmp_name, "XMP")
+        if here is None or there is None:
+            continue
+        if here.role == "tool" or there.role == "tool":
+            continue
+        if here.value.strip() == there.value.strip():
+            continue
+        findings.append(
+            Finding(
+                detector="metadata-conflict",
+                basis=Basis.SELF_REPORTED,
+                summary=(
+                    f"the Info dictionary gives {info_name} as "
+                    f'"{here.value}" and the XMP packet gives {xmp_name} as '
+                    f'"{there.value}". A PDF states its metadata twice and '
+                    "nothing makes the two agree; a tool that clears one and "
+                    "not the other leaves exactly this"
+                ),
+                human_sees="",
+                machine_reads=there.value,
+                location=Location(),
+            )
+        )
+    return findings
+
+
+def revision_history(metadata: Metadata, text: str) -> list[Finding]:
+    """The XMP edit trail: what has touched this file, and when."""
+    if not metadata.history:
+        return []
+    events = [event.described() for event in metadata.history]
+    tools = [event.software for event in metadata.history if event.software]
+    return [
+        Finding(
+            detector="revision-history",
+            basis=Basis.SELF_REPORTED,
+            summary=(
+                f"the XMP packet records {len(events)} event"
+                f"{'' if len(events) == 1 else 's'} in this file's history: "
+                + "; ".join(events)
+                + ". It is the file's own account, and it survives a scrub of "
+                "the Info dictionary"
+            ),
+            human_sees="",
+            machine_reads=", ".join(dict.fromkeys(tools)) or "; ".join(events),
+            location=Location(),
+        )
+    ]
+
+
 def describe(metadata: Metadata) -> list[str]:
     """One remark saying what the file claims produced it, and when.
 
@@ -180,4 +294,10 @@ def detect(metadata: Metadata, text: str) -> list[Finding]:
     `text` is the document's own text, and it is what makes these findings
     about a *gap* rather than a dump of the Info dictionary.
     """
-    return undisclosed(metadata, text) + paths(metadata, text) + conflicts(metadata, text)
+    return (
+        undisclosed(metadata, text)
+        + paths(metadata, text)
+        + conflicts(metadata, text)
+        + disagreements(metadata, text)
+        + revision_history(metadata, text)
+    )
