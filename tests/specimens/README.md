@@ -28,6 +28,7 @@ which RFC 2606 reserves for the purpose.
 | [`pdf/libreoffice-writer-metadata-leak.pdf`](pdf/libreoffice-writer-metadata-leak.md) | LibreOffice 24.2 Writer | the same sentence | the same leak, minus what the PDF export drops |
 | [`pdf/xmp-survives-the-scrub.pdf`](pdf/xmp-survives-the-scrub.md) | LibreOffice 24.2, then exiftool 12.76 | an Info dictionary that looks cleaned | an XMP packet that still holds all of it |
 | [`pdf/chrome-transparent-text.pdf`](pdf/chrome-transparent-text.md) | Skia/PDF m152 (headless Chrome) | two paragraphs and a blank gap | two more paragraphs, painted at no opacity |
+| [`pdf/redacted-scan-with-ocr.pdf`](pdf/redacted-scan-with-ocr.md) | LibreOffice, Ghostscript, tesseract 5.3.4, ImageMagick, pypdf | a scan with the figure blacked out | an OCR layer made before the redaction, still spelling it |
 
 The first two are failed redactions. The next two must not be reported, and for
 different reasons: one was redacted correctly, the other has nothing to search.
@@ -86,8 +87,7 @@ Named here so their absence is not mistaken for coverage:
   never agree about everything — the PDF specimens proved that twice.
 - **`w:moveFrom` / `w:moveTo` from a real producer.** LibreOffice does not emit
   move tracking; the reader handles it and only a synthetic test exercises it.
-- **The two detectors with no specimen at all.** `invisible-text` (render mode
-  `3 Tr`) and `text-under-image` are covered by unit tests on hand-built pages
-  and by nothing a producer wrote. Every other detector fires on a committed
-  file; these two are the exception, and the exception is the risk — it is
-  exactly the shape of the bug that started this project.
+- **`text-under-image` has no specimen.** It is the last detector covered only
+  by unit tests on hand-built pages. Every other one now fires on a committed
+  file, and the exception is the risk — it is exactly the shape of the bug that
+  started this project.

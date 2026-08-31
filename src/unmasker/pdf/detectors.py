@@ -98,7 +98,11 @@ def _appearance(shape: Shape) -> tuple[str, str]:
     return "▓", f"a shape of luminance {colour.luminance:.2f}"
 
 
-def _lines(page: InterpretedPage) -> list[list[tuple[Glyph, TextRun]]]:
+def _painted(run: TextRun) -> bool:
+    return run.render_mode in PAINTING_MODES and not run.is_invisible
+
+
+def _lines(page: InterpretedPage, include=_painted) -> list[list[tuple[Glyph, TextRun]]]:
     """Every painted glyph on the page, gathered into lines and ordered.
 
     Grouping has to happen here and not per show-operation, because producers
@@ -113,7 +117,7 @@ def _lines(page: InterpretedPage) -> list[list[tuple[Glyph, TextRun]]]:
     """
     buckets: dict[int, list[tuple[Glyph, TextRun]]] = {}
     for run in page.texts:
-        if run.render_mode not in PAINTING_MODES or run.is_invisible:
+        if not include(run):
             continue
         for glyph in run.glyphs:
             buckets.setdefault(round(glyph.bbox.y0), []).append((glyph, run))
@@ -267,48 +271,91 @@ def _finding(
     )
 
 
-def invisible_text(page: InterpretedPage) -> list[Finding]:
-    """Text drawn in a render mode that puts no ink on the page.
-
-    Mode 3 is `neither fill nor stroke`; mode 7 adds the glyphs to the clipping
-    path and paints nothing. Both leave the text selectable, searchable and
-    entirely absent from the page a person looks at.
-    """
-    findings = []
-    for run in page.texts:
-        unpainted = run.render_mode not in PAINTING_MODES
-        clear = run.alpha <= INVISIBLE_ALPHA
-        faint = not unpainted and not clear and run.alpha <= FAINT_ALPHA
-        if not (unpainted or clear or faint):
-            continue
-        if not run.text.strip():
-            continue
-
-        if unpainted:
-            why = f"drawn in render mode {run.render_mode}, which paints neither fill nor stroke"
-        elif clear:
-            why = (
-                f"painted at an opacity of {run.alpha:g}, which puts nothing on "
-                "the page; the glyphs are laid out and shaped as any others"
-            )
-        else:
-            why = (
-                f"painted at an opacity of {run.alpha:g}, faint enough that a "
-                "reader may not see it - and also how a watermark is set"
-            )
-
-        findings.append(
-            Finding(
-                detector="invisible-text",
-                basis=Basis.CIRCUMSTANTIAL if faint else Basis.DIRECT,
-                summary=f"{len(run.text)} characters {why}",
-                human_sees="",
-                machine_reads=run.text,
-                location=Location(page=page.number),
-                codepoints=tuple(f"U+{ord(c):04X}" for c in run.text),
-            )
+def _why_invisible(run: TextRun) -> tuple[str, str] | None:
+    """(kind, wording) for a run that puts nothing on the page, else None."""
+    if run.render_mode not in PAINTING_MODES:
+        return (
+            f"mode-{run.render_mode}",
+            f"drawn in render mode {run.render_mode}, which paints neither fill nor stroke",
         )
+    if run.alpha <= INVISIBLE_ALPHA:
+        return (
+            "clear",
+            f"painted at an opacity of {run.alpha:g}, which puts nothing on the "
+            "page; the glyphs are laid out and shaped as any others",
+        )
+    if run.alpha <= FAINT_ALPHA:
+        return (
+            "faint",
+            f"painted at an opacity of {run.alpha:g}, faint enough that a reader "
+            "may not see it - and also how a watermark is set",
+        )
+    return None
+
+
+def invisible_text(page: InterpretedPage) -> list[Finding]:
+    """Text that puts nothing on the page: by its render mode or its opacity.
+
+    Mode 3 is `neither fill nor stroke` and mode 7 adds the glyphs to the
+    clipping path; an OCR layer under a scanned page is written in one of them,
+    by every OCR pipeline there is. Zero opacity is the same statement made a
+    different way, and `color: transparent` is one CSS declaration.
+
+    Grouped by line, not by show-operation. tesseract writes one operation per
+    *word*, so reporting per run turns one hidden line into eight findings -
+    the same mistake `covered_text` made with Chrome, which writes one per
+    glyph, and the same fix.
+    """
+    lines = _lines(page, include=lambda run: _why_invisible(run) is not None)
+    findings = []
+    for line in lines:
+        # A line could in principle mix an unpainted run with a transparent
+        # one. They are different statements, so they stay different findings.
+        by_kind: dict[str, list[tuple[Glyph, TextRun]]] = {}
+        for glyph, run in line:
+            kind, _ = _why_invisible(run)
+            by_kind.setdefault(kind, []).append((glyph, run))
+
+        for entries in by_kind.values():
+            text = _joined(entries)
+            if not text.strip():
+                continue
+            run = entries[0][1]
+            _, why = _why_invisible(run)
+            findings.append(
+                Finding(
+                    detector="invisible-text",
+                    basis=(
+                        Basis.CIRCUMSTANTIAL if _why_invisible(run)[0] == "faint" else Basis.DIRECT
+                    ),
+                    summary=f"{len(text)} characters {why}",
+                    human_sees="",
+                    machine_reads=text,
+                    location=Location(page=page.number),
+                    codepoints=tuple(f"U+{ord(c):04X}" for c in text),
+                )
+            )
     return findings
+
+
+def _joined(entries: list[tuple[Glyph, TextRun]]) -> str:
+    """The glyphs of a line, with a space wherever the pen jumped a gap.
+
+    A producer that writes one show-operation per word emits no space between
+    them - the gap is in the positioning. Joining the glyphs without putting it
+    back would report `Agreedfigure:250,000EUR`, which is not what any parser
+    reads out of the file.
+    """
+    out: list[str] = []
+    previous = None
+    for glyph, run in entries:
+        if previous is not None:
+            gap = glyph.bbox.x0 - previous.bbox.x1
+            if gap > run.size * 0.15 and not out[-1].isspace():
+                out.append(" ")
+        out.append(glyph.char)
+        previous = glyph
+    return "".join(out)
 
 
 def detect(page: InterpretedPage) -> list[Finding]:

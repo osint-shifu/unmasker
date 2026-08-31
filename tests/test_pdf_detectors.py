@@ -613,3 +613,128 @@ def test_nothing_is_covered_or_low_contrast_in_that_specimen():
     assert covered_text(interpreted) == []
     assert low_contrast_text(interpreted) == []
     assert off_page_text(interpreted) == []
+
+
+# --------------------------------------------------------------------------
+# the OCR-layer specimen
+# --------------------------------------------------------------------------
+
+SCAN = "redacted-scan-with-ocr.pdf"
+
+
+def test_the_invisible_ocr_layer_is_reported_by_the_line_not_by_the_word():
+    """tesseract writes one show-operation per word. Reporting per run turns
+    one hidden line into eight findings - the same mistake `covered_text` made
+    with Chrome, which writes one per glyph."""
+    found = invisible_text(interpret_page(page_of(SCAN)))
+    assert len(found) == 3, [f.machine_reads for f in found]
+
+
+def test_the_redacted_figure_is_still_in_the_invisible_layer():
+    """The box was painted on the picture after the OCR ran. The words are
+    underneath it, complete, and nothing on the page says so."""
+    found = invisible_text(interpret_page(page_of(SCAN)))
+    reads = " ".join(f.machine_reads for f in found)
+    assert "250,000 EUR" in reads
+
+
+def test_the_words_of_a_line_keep_their_spacing_when_they_are_joined():
+    found = invisible_text(interpret_page(page_of(SCAN)))
+    assert any(f.machine_reads.startswith("Agreed figure:") for f in found)
+
+
+def test_that_specimen_is_an_image_with_nothing_painted_over_visible_text():
+    interpreted = interpret_page(page_of(SCAN))
+    assert [s.kind for s in interpreted.shapes] == ["image", "image"]
+    assert covered_text(interpreted) == []
+    assert text_under_image(interpreted) == []
+
+
+def test_a_gap_between_two_show_operations_becomes_a_space():
+    """A producer that writes one operation per word emits no space between
+    them - the gap is in the positioning. tesseract happens to write a trailing
+    space in each, so the specimen never exercises this; Chrome does not, and
+    neither do many others."""
+    left = TextRun(
+        text="Agreed",
+        glyphs=glyphs("Agreed", x=100, y=200),
+        bbox=Rect(100, 200, 160, 210),
+        font="F1",
+        size=10,
+        render_mode=3,
+        fill=BLACK,
+        order=0,
+    )
+    right = TextRun(
+        text="figure",
+        glyphs=glyphs("figure", x=200, y=200),
+        bbox=Rect(200, 200, 260, 210),
+        font="F1",
+        size=10,
+        render_mode=3,
+        fill=BLACK,
+        order=1,
+    )
+    (found,) = invisible_text(
+        InterpretedPage(number=1, box=PAGE, shapes=(), texts=(left, right))
+    )
+    assert found.machine_reads == "Agreed figure"
+
+
+def test_glyphs_that_merely_touch_are_not_separated():
+    """Chrome splits a word across operations with no gap at all. Putting a
+    space in there would report a word that is not in the file."""
+    left = TextRun(
+        text="TRANSP",
+        glyphs=glyphs("TRANSP", x=100, y=200),
+        bbox=Rect(100, 200, 160, 210),
+        font="F1",
+        size=10,
+        render_mode=3,
+        fill=BLACK,
+        order=0,
+    )
+    right = TextRun(
+        text="ARENT",
+        glyphs=glyphs("ARENT", x=160, y=200),
+        bbox=Rect(160, 200, 210, 210),
+        font="F1",
+        size=10,
+        render_mode=3,
+        fill=BLACK,
+        order=1,
+    )
+    (found,) = invisible_text(
+        InterpretedPage(number=1, box=PAGE, shapes=(), texts=(left, right))
+    )
+    assert found.machine_reads == "TRANSPARENT"
+
+
+def test_two_ways_of_being_invisible_on_one_line_are_two_findings():
+    """A render mode that paints nothing and an opacity that paints nothing are
+    different statements about the file. Merging them would give one finding
+    that could only describe half of itself."""
+    unpainted = TextRun(
+        text="MODE",
+        glyphs=glyphs("MODE", x=100, y=200),
+        bbox=Rect(100, 200, 140, 210),
+        font="F1",
+        size=10,
+        render_mode=3,
+        fill=BLACK,
+        order=0,
+    )
+    clear = TextRun(
+        text="ALPHA",
+        glyphs=glyphs("ALPHA", x=200, y=200),
+        bbox=Rect(200, 200, 250, 210),
+        font="F1",
+        size=10,
+        fill=BLACK,
+        alpha=0.0,
+        order=1,
+    )
+    found = invisible_text(
+        InterpretedPage(number=1, box=PAGE, shapes=(), texts=(unpainted, clear))
+    )
+    assert sorted(f.machine_reads for f in found) == ["ALPHA", "MODE"]

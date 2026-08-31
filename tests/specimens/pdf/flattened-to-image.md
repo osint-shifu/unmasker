@@ -47,4 +47,8 @@ the equivalent, and expect this specimen to be the test for it.
 Note what this control does *not* cover: a page flattened to an image with an
 invisible OCR text layer laid underneath, which is what a scanner or a
 "searchable PDF" pipeline produces. That is a failed redaction again, and a
-nastier one. It needs its own specimen.
+nastier one.
+
+It now has its own specimen — [`redacted-scan-with-ocr.pdf`](redacted-scan-with-ocr.md),
+where the box was painted on the picture after the OCR ran and the figure is
+still in the layer underneath.
