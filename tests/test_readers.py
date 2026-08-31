@@ -122,9 +122,7 @@ def test_docx_body_text_is_read():
 def test_the_docx_specimen_still_carries_its_hidden_characters():
     """If a LibreOffice upgrade normalises these away, the specimen quietly
     stops being a specimen. This is the test that would notice."""
-    body = "\n".join(
-        u.text for u in read(DOCX / "libreoffice-writer-hidden-characters.docx").units
-    )
+    body = "\n".join(u.text for u in read(DOCX / "libreoffice-writer-hidden-characters.docx").units)
     assert "\u200b" in body, "zero-width space did not survive the conversion"
     assert "\u202e" in body, "right-to-left override did not survive"
     assert any(0xE0000 <= ord(c) <= 0xE007F for c in body), "tag characters did not survive"
@@ -139,3 +137,35 @@ def test_a_zip_that_is_not_a_word_document_is_refused(tmp_path):
         z.writestr("hello.txt", "not a document")
     with pytest.raises(UnreadableFile):
         read(f)
+
+
+# --------------------------------------------------------------------------
+# the painted layer
+# --------------------------------------------------------------------------
+
+
+def test_pdf_extraction_carries_what_was_drawn_on_each_page():
+    """Task 4 needs the shapes and the text together. The reader is the layer
+    that opens the file, so it is where both come from."""
+    got = read(SPECIMENS / "libreoffice-writer-black-bars.pdf")
+    assert len(got.drawn) == 1
+    fills = [s for s in got.drawn[0].shapes if s.kind == "fill"]
+    assert len(fills) == 4
+    assert all(s.colour.rgb == (0, 0, 0) for s in fills)
+
+
+def test_a_page_with_no_text_layer_says_what_is_painted_on_it_instead():
+    """'Nothing to search' is more useful when it also says what is there.
+    A page with an image on it and no text is the OCR case, and saying so is
+    the difference between a dead end and a next step."""
+    got = read(SPECIMENS / "flattened-to-image.pdf")
+    note = " ".join(got.remarks)
+    assert "no text layer" in note
+    assert "image" in note
+    assert "OCR" in note
+
+
+def test_a_plain_file_has_nothing_drawn(tmp_path):
+    f = tmp_path / "n.txt"
+    f.write_text("hello", encoding="utf-8")
+    assert read(f).drawn == ()

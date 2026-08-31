@@ -12,6 +12,7 @@ from pathlib import Path
 
 from pypdf import PdfReader
 
+from ..pdf.interpreter import InterpretedPage, interpret_page
 from .model import Extraction, TextUnit, UnreadableFile
 
 
@@ -58,6 +59,7 @@ def read_pdf(path: Path) -> Extraction:
         )
 
     units: list[TextUnit] = []
+    drawn: list[InterpretedPage] = []
     for number, page in enumerate(reader.pages, start=1):
         try:
             text = page.extract_text() or ""
@@ -65,6 +67,18 @@ def read_pdf(path: Path) -> Extraction:
             text = ""
             remarks.append(f"page {number} could not be extracted: {exc}")
         units.append(TextUnit(text=text, page=number))
+
+        try:
+            painted = interpret_page(page, number)
+        except Exception as exc:
+            painted = None
+            remarks.append(
+                f"page {number}: the content stream could not be interpreted "
+                f"({exc}); nothing about what is drawn on it was established"
+            )
+        if painted is not None:
+            drawn.append(painted)
+            remarks.extend(f"page {number}: {note}" for note in painted.remarks)
 
         if not text.strip():
             if _has_fonts(page):
@@ -75,11 +89,35 @@ def read_pdf(path: Path) -> Extraction:
             else:
                 remarks.append(
                     f"page {number} has no text layer, so there was nothing to "
-                    "search on it - reading what is under a mark there would "
-                    "need OCR, which unmasker does not do"
+                    f"search on it{_painted_summary(painted)}. Reading what is "
+                    "under a mark there would need OCR, which unmasker does not do"
                 )
 
     if not units:
         remarks.append("the file has no pages")
 
-    return Extraction(kind="pdf", units=tuple(units), remarks=tuple(remarks))
+    return Extraction(kind="pdf", units=tuple(units), remarks=tuple(remarks), drawn=tuple(drawn))
+
+
+def _painted_summary(painted: InterpretedPage | None) -> str:
+    """Say what *is* on a page that has no text.
+
+    "Nothing to search" is a dead end on its own. "Nothing to search, and one
+    image is painted here" is the OCR case, named, so the reader knows what the
+    next step would be rather than only that this one stopped.
+    """
+    if painted is None:
+        return ""
+    counts: dict[str, int] = {}
+    for shape in painted.shapes:
+        counts[shape.kind] = counts.get(shape.kind, 0) + 1
+    if not counts:
+        return ", and nothing is painted on it either"
+    parts = [f"{n} {kind}" if n == 1 else f"{n} {kind}s" for kind, n in sorted(counts.items())]
+    return (
+        ", though "
+        + " and ".join(parts)
+        + " "
+        + ("is" if sum(counts.values()) == 1 else "are")
+        + " painted there"
+    )

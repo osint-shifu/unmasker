@@ -63,9 +63,7 @@ PARAGRAPHS = [
 
 
 def fodt() -> str:
-    body = "".join(
-        f"<text:p>{p}</text:p>" if p else "<text:p/>" for p in PARAGRAPHS
-    )
+    body = "".join(f"<text:p>{p}</text:p>" if p else "<text:p/>" for p in PARAGRAPHS)
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 <office:document
  xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0"

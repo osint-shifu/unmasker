@@ -54,6 +54,15 @@ class Extraction:
     and none of it is hidden".
     """
 
+    drawn: tuple = ()
+    """What the page paints, for readers that can see it - one
+    `InterpretedPage` per page, empty for readers that only yield text.
+
+    It lives here because the reader is the layer that opens the file, and a
+    detector that has to ask what is under a black rectangle needs the text and
+    the rectangle to have come out of the same reading of the same bytes.
+    """
+
     @property
     def has_text(self) -> bool:
         return any(u.text.strip() for u in self.units)
