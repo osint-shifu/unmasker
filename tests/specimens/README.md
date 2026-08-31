@@ -29,6 +29,7 @@ which RFC 2606 reserves for the purpose.
 | [`pdf/xmp-survives-the-scrub.pdf`](pdf/xmp-survives-the-scrub.md) | LibreOffice 24.2, then exiftool 12.76 | an Info dictionary that looks cleaned | an XMP packet that still holds all of it |
 | [`pdf/chrome-transparent-text.pdf`](pdf/chrome-transparent-text.md) | Skia/PDF m152 (headless Chrome) | two paragraphs and a blank gap | two more paragraphs, painted at no opacity |
 | [`pdf/redacted-scan-with-ocr.pdf`](pdf/redacted-scan-with-ocr.md) | LibreOffice, Ghostscript, tesseract 5.3.4, ImageMagick, pypdf | a scan with the figure blacked out | an OCR layer made before the redaction, still spelling it |
+| [`pdf/libreoffice-writer-image-over-text.pdf`](pdf/libreoffice-writer-image-over-text.md) | LibreOffice 24.2, ImageMagick | a black bar over a name | the name, under a *picture* and not a shape |
 
 The first two are failed redactions. The next two must not be reported, and for
 different reasons: one was redacted correctly, the other has nothing to search.
@@ -78,8 +79,8 @@ Named here so their absence is not mistaken for coverage:
   glyph box, which is exact for horizontal text and wrong for anything else.
 - **Producers not on this machine.** Acrobat and Word draw their own way, and
   LibreOffice and Chrome already disagree with each other.
-- **Redaction by image, annotation or clipping path**, rather than a filled
-  shape.
+- **Redaction by annotation or by clipping path.** Redaction by image now has
+  a specimen; these two do not.
 - **A raster page with an invisible OCR text layer underneath**, which is a
   failed redaction that `flattened-to-image.pdf` does not represent.
 - **Word's own OOXML.** Word is not on this machine, so every DOCX here was
@@ -87,7 +88,7 @@ Named here so their absence is not mistaken for coverage:
   never agree about everything — the PDF specimens proved that twice.
 - **`w:moveFrom` / `w:moveTo` from a real producer.** LibreOffice does not emit
   move tracking; the reader handles it and only a synthetic test exercises it.
-- **`text-under-image` has no specimen.** It is the last detector covered only
-  by unit tests on hand-built pages. Every other one now fires on a committed
-  file, and the exception is the risk — it is exactly the shape of the bug that
-  started this project.
+- **Nothing, on this front.** Every detector now fires on a committed file that
+  a producer wrote, and `test_every_detector_now_has_a_specimen` holds that
+  position. It was the gap that mattered most: a detector covered only by
+  hand-built pages is exactly the shape of the bug that started this project.

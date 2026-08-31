@@ -675,9 +675,7 @@ def test_a_gap_between_two_show_operations_becomes_a_space():
         fill=BLACK,
         order=1,
     )
-    (found,) = invisible_text(
-        InterpretedPage(number=1, box=PAGE, shapes=(), texts=(left, right))
-    )
+    (found,) = invisible_text(InterpretedPage(number=1, box=PAGE, shapes=(), texts=(left, right)))
     assert found.machine_reads == "Agreed figure"
 
 
@@ -704,9 +702,7 @@ def test_glyphs_that_merely_touch_are_not_separated():
         fill=BLACK,
         order=1,
     )
-    (found,) = invisible_text(
-        InterpretedPage(number=1, box=PAGE, shapes=(), texts=(left, right))
-    )
+    (found,) = invisible_text(InterpretedPage(number=1, box=PAGE, shapes=(), texts=(left, right)))
     assert found.machine_reads == "TRANSPARENT"
 
 
@@ -734,7 +730,68 @@ def test_two_ways_of_being_invisible_on_one_line_are_two_findings():
         alpha=0.0,
         order=1,
     )
-    found = invisible_text(
-        InterpretedPage(number=1, box=PAGE, shapes=(), texts=(unpainted, clear))
-    )
+    found = invisible_text(InterpretedPage(number=1, box=PAGE, shapes=(), texts=(unpainted, clear)))
     assert sorted(f.machine_reads for f in found) == ["ALPHA", "MODE"]
+
+
+# --------------------------------------------------------------------------
+# the image-over-text specimen
+# --------------------------------------------------------------------------
+
+IMAGE_OVER = "libreoffice-writer-image-over-text.pdf"
+
+
+def test_a_redaction_pasted_as_a_picture_is_found():
+    """No path, no fill colour, no `re` and no `f*` - an image XObject placed
+    by a matrix. Every shape-based detector here finds nothing on it."""
+    (found,) = text_under_image(interpret_page(page_of(IMAGE_OVER)))
+    assert found.machine_reads == "Ludmila Wieczorek-Test"
+
+
+def test_no_shape_detector_sees_that_specimen():
+    interpreted = interpret_page(page_of(IMAGE_OVER))
+    assert covered_text(interpreted) == []
+    assert [s.kind for s in interpreted.shapes] == ["image"]
+
+
+def test_the_scan_explanation_is_still_named_on_a_real_file():
+    (found,) = text_under_image(interpret_page(page_of(IMAGE_OVER)))
+    assert "scan" in found.summary.lower()
+
+
+def test_the_other_fields_of_that_specimen_are_not_reported():
+    (found,) = text_under_image(interpret_page(page_of(IMAGE_OVER)))
+    assert "SYN-2024-1102" not in found.machine_reads
+    assert "no further action" not in found.machine_reads
+
+
+def test_every_detector_now_has_a_specimen():
+    """The gap that mattered most: two detectors were covered only by unit
+    tests on hand-built pages, which is exactly the shape of the bug that
+    started this project."""
+    fired = set()
+    for name in (
+        "libreoffice-writer-black-bars.pdf",
+        "chrome-print-css-overlay.pdf",
+        "libreoffice-writer-partial-bars.pdf",
+        "libreoffice-writer-hidden-in-plain-sight.pdf",
+        "chrome-transparent-text.pdf",
+        "redacted-scan-with-ocr.pdf",
+        IMAGE_OVER,
+    ):
+        interpreted = interpret_page(page_of(name))
+        for finding in (
+            covered_text(interpreted)
+            + text_under_image(interpreted)
+            + invisible_text(interpreted)
+            + low_contrast_text(interpreted)
+            + off_page_text(interpreted)
+        ):
+            fired.add(finding.detector)
+    assert fired == {
+        "covered-text",
+        "text-under-image",
+        "invisible-text",
+        "low-contrast-text",
+        "off-page-text",
+    }
