@@ -31,6 +31,7 @@ which RFC 2606 reserves for the purpose.
 | [`pdf/redacted-scan-with-ocr.pdf`](pdf/redacted-scan-with-ocr.md) | LibreOffice, Ghostscript, tesseract 5.3.4, ImageMagick, pypdf | a scan with the figure blacked out | an OCR layer made before the redaction, still spelling it |
 | [`pdf/libreoffice-writer-image-over-text.pdf`](pdf/libreoffice-writer-image-over-text.md) | LibreOffice 24.2, ImageMagick | a black bar over a name | the name, under a *picture* and not a shape |
 | [`pdf/coverage-edge.pdf`](pdf/coverage-edge.md) | LibreOffice 24.2 | four marks, covered by 100%, 75%, 50% and 25% | where this tool's threshold actually is |
+| [`pdf/text-on-an-image.pdf`](pdf/text-on-an-image.md) | LibreOffice 24.2, ImageMagick | white text on a picture | nothing — and a note saying it could not be judged |
 
 The first two are failed redactions. The next two must not be reported, and for
 different reasons: one was redacted correctly, the other has nothing to search.
@@ -70,9 +71,10 @@ Named here so their absence is not mistaken for coverage:
 - **Text outside the MediaBox.** LibreOffice refuses to emit it, so the
   off-page case is represented only by a CropBox smaller than the MediaBox.
   Another producer is needed for the other half.
-- **Text hidden behind a shading or a pattern.** `low-contrast-text` reports
-  nothing when it cannot read the background colour, which is the honest answer
-  and also an untested one.
+- **A true PDF shading (`sh`) or a tiling pattern behind text.**
+  `text-on-an-image.pdf` covers the picture case; LibreOffice renders a
+  gradient as dozens of solid strips, which the existing machinery reads
+  correctly, so a producer that emits `sh` is still needed for that half.
 - **An XMP packet written in attribute form**, which is how Adobe writes them,
   and a history with more than one event. Both are handled and only synthetic
   tests exercise them.

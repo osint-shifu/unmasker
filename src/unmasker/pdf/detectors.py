@@ -363,6 +363,35 @@ def _joined(entries: list[tuple[Glyph, TextRun]]) -> str:
     return "".join(out)
 
 
+def remarks(page: InterpretedPage) -> list[str]:
+    """What this page's detectors could not establish, as opposed to found.
+
+    `CLAUDE.md`: "nothing found" has two meanings, and a reader who cannot tell
+    them apart has been told something the tool never established. Silence
+    about text sitting on a picture is one of the two: whether those glyphs are
+    legible depends on what colour the picture is exactly where they sit, and
+    the content stream does not say. Nothing short of rendering it finds out.
+    """
+    on_a_picture = 0
+    for run in page.texts:
+        if run.render_mode not in PAINTING_MODES or run.is_invisible:
+            continue
+        for glyph in run.glyphs:
+            if not glyph.char.strip():
+                continue
+            if _background(page, glyph, run) is None:
+                on_a_picture += 1
+
+    if not on_a_picture:
+        return []
+    return [
+        f"page {page.number} has {_count('x' * on_a_picture)} sitting on a "
+        "picture or on a fill this file does not state plainly; whether they "
+        "can be read there was not established, because what colour it is "
+        "where they sit is not in the content stream"
+    ]
+
+
 def detect(page: InterpretedPage) -> list[Finding]:
     """Every tier-1 finding on one interpreted page.
 
@@ -392,7 +421,9 @@ def _background(page: InterpretedPage, glyph: Glyph, run: TextRun) -> Colour | N
     """
     best: Shape | None = None
     for shape in page.shapes:
-        if shape.kind != "fill" or shape.order >= run.order or not shape.is_opaque:
+        if shape.kind not in ("fill", "image") or shape.order >= run.order:
+            continue
+        if not shape.is_opaque:
             continue
         if not shape.visible_bbox.intersect(glyph.bbox).area >= glyph.bbox.area * COVERAGE:
             continue
@@ -400,6 +431,12 @@ def _background(page: InterpretedPage, glyph: Glyph, run: TextRun) -> Colour | N
             best = shape
     if best is None:
         return WHITE
+    if best.kind == "image":
+        # A photograph, a letterhead, a watermark. What colour the picture is
+        # where this glyph sits is not something the content stream says, and
+        # answering "white, like the paper" would be inventing the evidence
+        # rather than reading it.
+        return None
     return best.colour
 
 
@@ -475,7 +512,9 @@ def low_contrast_text(page: InterpretedPage) -> list[Finding]:
 
 def _is_paper(page: InterpretedPage, glyph: Glyph, run: TextRun) -> bool:
     for shape in page.shapes:
-        if shape.kind != "fill" or shape.order >= run.order or not shape.is_opaque:
+        if shape.kind not in ("fill", "image") or shape.order >= run.order:
+            continue
+        if not shape.is_opaque:
             continue
         if shape.visible_bbox.intersect(glyph.bbox).area >= glyph.bbox.area * COVERAGE:
             return False

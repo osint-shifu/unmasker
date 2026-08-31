@@ -20,6 +20,7 @@ from unmasker.pdf.detectors import (
     invisible_text,
     low_contrast_text,
     off_page_text,
+    remarks,
     text_under_image,
 )
 from unmasker.pdf.geometry import BLACK, WHITE, Colour, Rect
@@ -60,6 +61,18 @@ def bar(x0, y0, x1, y1, *, order: int = 1, colour=BLACK, alpha: float = 1.0, cli
         colour=colour,
         clip=clip or PAGE,
         alpha=alpha,
+        order=order,
+    )
+
+
+def image(x0, y0, x1, y1, *, order: int = 1) -> Shape:
+    return Shape(
+        kind="image",
+        operator="Do",
+        points=((x0, y0), (x1, y1)),
+        bbox=Rect(x0, y0, x1, y1),
+        colour=None,
+        clip=PAGE,
         order=order,
     )
 
@@ -428,6 +441,40 @@ def test_a_background_whose_colour_is_unreadable_is_not_assumed_to_be_paper():
     )
 
 
+def test_an_image_behind_the_text_is_a_background_this_tool_cannot_read():
+    """A photograph, a letterhead, a watermark. The tool does not know what
+    colour the picture is where the glyph sits, and saying "white, the same as
+    the paper" would be inventing the evidence rather than reading it."""
+    backdrop = image(90, 190, 320, 220, order=0)
+    assert (
+        low_contrast_text(
+            InterpretedPage(
+                number=1,
+                box=PAGE,
+                shapes=(backdrop,),
+                texts=(run("WHITE", order=1, fill=WHITE),),
+            )
+        )
+        == []
+    )
+
+
+def test_an_image_behind_the_text_does_not_hide_a_fill_that_is_over_it():
+    """Order still decides. A box painted on top of the picture is what the eye
+    sees, and its colour is readable."""
+    backdrop = image(90, 190, 320, 220, order=0)
+    box = bar(90, 190, 320, 220, order=1, colour=WHITE)
+    (found,) = low_contrast_text(
+        InterpretedPage(
+            number=1,
+            box=PAGE,
+            shapes=(backdrop, box),
+            texts=(run("WHITE", order=2, fill=WHITE),),
+        )
+    )
+    assert found.machine_reads == "WHITE"
+
+
 def test_stroke_only_text_is_judged_on_its_stroke_colour():
     """Render mode 1 draws outlines and never fills. Comparing its fill colour
     to the background would judge a colour that is never put on the page."""
@@ -502,18 +549,6 @@ def test_a_glyph_merely_touching_the_edge_is_not_off_the_page():
 # --------------------------------------------------------------------------
 # text under an image
 # --------------------------------------------------------------------------
-
-
-def image(x0, y0, x1, y1, *, order: int = 1) -> Shape:
-    return Shape(
-        kind="image",
-        operator="Do",
-        points=((x0, y0), (x1, y1)),
-        bbox=Rect(x0, y0, x1, y1),
-        colour=None,
-        clip=PAGE,
-        order=order,
-    )
 
 
 def test_text_under_an_image_is_its_own_finding():
@@ -827,3 +862,38 @@ def test_one_character_is_reported_in_the_singular():
     """A report is read by a person."""
     found = covered_text(interpret_page(page_of(EDGE)))
     assert all(f.summary.startswith("1 character under") for f in found)
+
+
+# --------------------------------------------------------------------------
+# the text-on-a-picture specimen
+# --------------------------------------------------------------------------
+
+ON_IMAGE = "text-on-an-image.pdf"
+
+
+def test_text_on_a_picture_is_not_reported_as_a_colour_finding():
+    """Whether it is legible depends on what colour the picture is where the
+    glyphs sit, and the content stream does not say."""
+    assert low_contrast_text(interpret_page(page_of(ON_IMAGE))) == []
+
+
+def test_but_the_tool_says_it_could_not_judge():
+    """Silence and `nothing there` are different answers. This is the first
+    one, said out loud."""
+    note = " ".join(remarks(interpret_page(page_of(ON_IMAGE))))
+    assert "not established" in note
+    assert "picture" in note
+
+
+def test_a_page_with_no_text_on_a_picture_gets_no_such_note():
+    assert remarks(interpret_page(page_of("libreoffice-writer-black-bars.pdf"))) == []
+
+
+def test_the_ordinary_lines_of_that_specimen_are_still_judged():
+    """Only the glyphs on the picture are unjudgeable. The black text on paper
+    beside them is compared as usual and comes back clean."""
+    interpreted = interpret_page(page_of(ON_IMAGE))
+    assert covered_text(interpreted) == []
+    assert invisible_text(interpreted) == []
+    note = " ".join(remarks(interpreted))
+    assert "31 characters" in note, note

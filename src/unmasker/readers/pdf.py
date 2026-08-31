@@ -14,6 +14,7 @@ from pypdf import PdfReader
 
 from ..metadata import read_pdf as read_pdf_metadata
 from ..metadata.detectors import describe
+from ..pdf.detectors import remarks as page_remarks
 from ..pdf.interpreter import InterpretedPage, interpret_page
 from .model import Extraction, TextUnit, UnreadableFile
 
@@ -85,6 +86,7 @@ def read_pdf(path: Path) -> Extraction:
         if painted is not None:
             drawn.append(painted)
             remarks.extend(f"page {number}: {note}" for note in painted.remarks)
+            remarks.extend(page_remarks(painted))
 
         if not text.strip():
             if _has_fonts(page):
