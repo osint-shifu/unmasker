@@ -10,6 +10,7 @@ from pathlib import Path
 
 from .docx import read_docx
 from .model import Extraction, TextUnit, UnreadableFile
+from .odf import read_odf
 from .pdf import read_pdf
 from .plain import read_plain
 
@@ -28,6 +29,26 @@ def read(path: str | Path) -> Extraction:
         return read_pdf(path)
     if head.startswith(b"PK\x03\x04"):
         # Every OOXML and ODF file is a zip. Which one it is depends on what is
-        # inside, so the zip readers decide between themselves.
-        return read_docx(path)
+        # inside, so the contents decide - not the extension, which a forensic
+        # tool has no business trusting.
+        return _read_zip(path)
     return read_plain(path)
+
+
+def _read_zip(path: Path) -> Extraction:
+    """An OOXML document, an OpenDocument one, or neither."""
+    import zipfile
+
+    try:
+        with zipfile.ZipFile(path) as archive:
+            names = set(archive.namelist())
+    except (OSError, zipfile.BadZipFile) as exc:
+        raise UnreadableFile(f"{path.name} is not a readable zip: {exc}") from exc
+
+    if "word/document.xml" in names:
+        return read_docx(path)
+    if "content.xml" in names:
+        return read_odf(path)
+    raise UnreadableFile(
+        f"{path.name} is a zip but neither a Word document nor an OpenDocument one"
+    )

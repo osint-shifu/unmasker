@@ -28,10 +28,10 @@ from pathlib import Path
 from . import __version__
 from .findings import Finding
 from .metadata.detectors import detect as detect_metadata
-from .ooxml.detectors import detect as detect_revisions
 from .pdf.detectors import detect as detect_drawn
 from .readers import UnreadableFile, read
 from .report import Style, render
+from .revisions import detect as detect_revisions
 from .text.invisible import scan_text
 from .theme import glyphs, resolve_depth
 

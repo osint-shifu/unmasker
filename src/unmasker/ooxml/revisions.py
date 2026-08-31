@@ -31,8 +31,9 @@ argument to make here.
 from __future__ import annotations
 
 import zipfile
-from dataclasses import dataclass, field
 from xml.etree import ElementTree
+
+from ..revisions import Comment, Revision, RevisionRecord
 
 W = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
 
@@ -42,61 +43,6 @@ SHOWING = {f"{W}ins": "insertion", f"{W}moveTo": "move-to"}
 REVISION_TAGS = {**HIDING, **SHOWING}
 
 FORMATTING_TAGS = {f"{W}rPrChange", f"{W}pPrChange", f"{W}tblPrChange", f"{W}tcPrChange"}
-
-
-@dataclass(frozen=True)
-class Revision:
-    kind: str
-    """`deletion`, `insertion`, `move-from` or `move-to`."""
-
-    text: str
-    """What the revision covers. Empty for a deleted paragraph mark, which
-    merges two paragraphs and quotes nothing."""
-
-    author: str | None
-    date: str | None
-    part: str
-    """Which part of the archive it came from - the body, a header, a footer."""
-
-    @property
-    def hides_text(self) -> bool:
-        return self.kind in ("deletion", "move-from") and bool(self.text.strip())
-
-
-@dataclass(frozen=True)
-class Comment:
-    text: str
-    author: str | None
-    date: str | None
-    initials: str | None = None
-
-
-@dataclass(frozen=True)
-class RevisionRecord:
-    revisions: tuple[Revision, ...] = ()
-    comments: tuple[Comment, ...] = ()
-    remarks: tuple[str, ...] = field(default_factory=tuple)
-
-    @property
-    def authors(self) -> tuple[str, ...]:
-        """Every name the file attributes a change to, once each, in order."""
-        seen: list[str] = []
-        for name in [r.author for r in self.revisions] + [c.author for c in self.comments]:
-            if name and name not in seen:
-                seen.append(name)
-        return tuple(seen)
-
-    @property
-    def dates(self) -> tuple[str, ...]:
-        return tuple(
-            sorted(
-                {d for d in [r.date for r in self.revisions] + [c.date for c in self.comments] if d}
-            )
-        )
-
-    @property
-    def is_empty(self) -> bool:
-        return not self.revisions and not self.comments
 
 
 def _parts(archive: zipfile.ZipFile) -> list[str]:

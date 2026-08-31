@@ -25,6 +25,7 @@ which RFC 2606 reserves for the purpose.
 | [`docx/libreoffice-writer-hidden-characters.docx`](docx/libreoffice-writer-hidden-characters.md) | LibreOffice 24.2 Writer | four ordinary lines | a zero-width space, an override, a hidden instruction, a homoglyph |
 | [`docx/libreoffice-writer-tracked-changes.docx`](docx/libreoffice-writer-tracked-changes.md) | LibreOffice 24.2 Writer | a settled figure of 90,000 EUR | the 250,000 EUR it replaced, a deleted sentence, and a candid comment |
 | [`docx/libreoffice-writer-metadata-leak.docx`](docx/libreoffice-writer-metadata-leak.md) | LibreOffice 24.2 Writer | one anonymous sentence | two people, a client, a codename and a home directory |
+| [`odf/libreoffice-writer-position-note.odt`](odf/libreoffice-writer-position-note.md) | LibreOffice 24.2, in its own format | a two-line note under a header | a struck-out figure, a private comment, an author, a client and a zero-width space |
 | [`pdf/libreoffice-writer-metadata-leak.pdf`](pdf/libreoffice-writer-metadata-leak.md) | LibreOffice 24.2 Writer | the same sentence | the same leak, minus what the PDF export drops |
 | [`pdf/xmp-survives-the-scrub.pdf`](pdf/xmp-survives-the-scrub.md) | LibreOffice 24.2, then exiftool 12.76 | an Info dictionary that looks cleaned | an XMP packet that still holds all of it |
 | [`pdf/chrome-transparent-text.pdf`](pdf/chrome-transparent-text.md) | Skia/PDF m152 (headless Chrome) | two paragraphs and a blank gap | two more paragraphs, painted at no opacity |
@@ -97,6 +98,9 @@ Named here so their absence is not mistaken for coverage:
 - **Word's own OOXML.** Word is not on this machine, so every DOCX here was
   written by LibreOffice. It emits valid revision markup, but two producers
   never agree about everything — the PDF specimens proved that twice.
+- **Spreadsheets and presentations**, in either family. `.xlsx`, `.pptx`,
+  `.ods` and `.odp` are the same containers with different body parts, and
+  nothing here reads or tests one.
 - **`w:moveFrom` / `w:moveTo` from a real producer.** LibreOffice does not emit
   move tracking; the reader handles it and only a synthetic test exercises it.
 - **Nothing, on this front.** Every detector now fires on a committed file that

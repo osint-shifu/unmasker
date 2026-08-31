@@ -19,8 +19,8 @@ import pytest
 from conftest import SPECIMENS
 
 from unmasker.findings import Basis
-from unmasker.ooxml.detectors import detect
 from unmasker.ooxml.revisions import read_revisions
+from unmasker.revisions import detect
 
 W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
 SPECIMEN = SPECIMENS / "docx" / "libreoffice-writer-tracked-changes.docx"

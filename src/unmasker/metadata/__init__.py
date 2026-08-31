@@ -46,7 +46,7 @@ from xml.etree import ElementTree
 
 from .xmp import parse_xmp
 
-__all__ = ["Field", "Metadata", "read_ooxml", "read_pdf"]
+__all__ = ["Field", "Metadata", "read_odf", "read_ooxml", "read_pdf"]
 
 # Roles, per container. A name absent from these tables is `other`: read and
 # kept, and nothing claimed about it.
@@ -89,6 +89,26 @@ OOXML_ROLES = {
     "lines": "count",
     "language": "other",
 }
+
+ODF_ROLES = {
+    "initial-creator": "content",
+    "creator": "content",
+    "title": "content",
+    "subject": "content",
+    "description": "content",
+    "keyword": "content",
+    "generator": "tool",
+    "creation-date": "time",
+    "date": "time",
+    "print-date": "time",
+    "editing-cycles": "count",
+    "editing-duration": "count",
+    "language": "other",
+    "template": "content",
+}
+
+ODF_META = "{urn:oasis:names:tc:opendocument:xmlns:meta:1.0}"
+ODF_DC = "{http://purl.org/dc/elements/1.1/}"
 
 CORE = "http://schemas.openxmlformats.org/package/2006/metadata/core-properties"
 EXT = "http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"
@@ -268,3 +288,50 @@ def read_ooxml(archive: zipfile.ZipFile) -> Metadata:
                     )
 
     return Metadata(fields=tuple(found), remarks=tuple(remarks))
+
+
+def read_odf(archive: zipfile.ZipFile) -> Metadata:
+    """Read `meta.xml` out of an OpenDocument archive.
+
+    ODF's `meta:generator` is the tool - `LibreOffice/24.2.7.2$Linux_X86_64`,
+    the same string and the same dotted quad as `docProps/app.xml`, and the
+    same answer: the field names a tool, so it is a version.
+
+    `meta:user-defined` is ODF's custom property, and gets the `content` role
+    whatever it is called, for the reason OOXML's custom properties do: a
+    standard property is something a tool wrote, a custom one is something a
+    person put there on purpose, and no name table anticipates them.
+    """
+    if "meta.xml" not in archive.namelist():
+        return Metadata()
+    root, problem = _parse(archive, "meta.xml")
+    if problem:
+        return Metadata(remarks=(problem,))
+
+    found: list[Field] = []
+    for child in root.iter():
+        name = child.tag.rsplit("}", 1)[-1]
+        if name in ("document-meta", "meta"):
+            continue
+        value = _clean(child.text)
+        if not value:
+            continue
+        if child.tag == f"{ODF_META}user-defined":
+            found.append(
+                Field(
+                    name=child.get(f"{ODF_META}name") or "user-defined",
+                    value=value,
+                    part="meta.xml",
+                    role="content",
+                )
+            )
+            continue
+        found.append(
+            Field(
+                name=name,
+                value=value,
+                part="meta.xml",
+                role=ODF_ROLES.get(name.lower(), "other"),
+            )
+        )
+    return Metadata(fields=tuple(found))

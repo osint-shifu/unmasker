@@ -1,6 +1,12 @@
-"""Findings from a Word document's tracked changes and comments.
+"""Tracked changes and comments, and what to report about them.
 
-Three, and the split between them is the point.
+A deletion is not an OOXML idea. Word keeps deleted text in `w:delText`,
+LibreOffice keeps it in `<text:deletion>`, and both are the same statement
+about a document: *this was taken off the page and left in the file.* So the
+record and the findings live here, and each format contributes only a reader
+that fills the record in.
+
+Three findings, and the split between them is the design.
 
 **`deleted-text`** — one per deletion. The words are in the file and not on the
 page, which is the same statement this tool makes about a black bar and about a
@@ -8,7 +14,8 @@ zero-width character. The author and the date go in the summary, because a
 deletion without them is half the evidence.
 
 **`comment`** — one per comment. A comment is not part of the document a reader
-prints, and it is very often where the candid sentence lives.
+prints, and it is very often where the candid sentence lives. A PDF says the
+same thing with an annotation, and that finding shares this name.
 
 **`revision-history`** — exactly one, for the whole file. Who edited a document
 and when is *one fact about the document*, not one fact per change. A draft
@@ -16,13 +23,69 @@ with two hundred insertions must not produce two hundred findings; that is the
 `filetrail` lesson about a report nobody finishes reading, arriving from a new
 direction. It is `SELF_REPORTED`, which is what that class was defined for: the
 file's own account of itself, believed only as far as a file can be. An author
-name in a .docx is whatever the copy of Word was configured to say.
+name in a document is whatever the application was configured to say.
 """
 
 from __future__ import annotations
 
-from ..findings import Basis, Finding, Location
-from .revisions import RevisionRecord
+from dataclasses import dataclass, field
+
+from .findings import Basis, Finding, Location
+
+
+@dataclass(frozen=True)
+class Revision:
+    kind: str
+    """`deletion`, `insertion`, `move-from` or `move-to`."""
+
+    text: str
+    """What the revision covers. Empty for a deleted paragraph mark, which
+    merges two paragraphs and quotes nothing."""
+
+    author: str | None
+    date: str | None
+    part: str
+    """Which part of the archive it came from - the body, a header, a footer."""
+
+    @property
+    def hides_text(self) -> bool:
+        return self.kind in ("deletion", "move-from") and bool(self.text.strip())
+
+
+@dataclass(frozen=True)
+class Comment:
+    text: str
+    author: str | None
+    date: str | None
+    initials: str | None = None
+
+
+@dataclass(frozen=True)
+class RevisionRecord:
+    revisions: tuple[Revision, ...] = ()
+    comments: tuple[Comment, ...] = ()
+    remarks: tuple[str, ...] = field(default_factory=tuple)
+
+    @property
+    def authors(self) -> tuple[str, ...]:
+        """Every name the file attributes a change to, once each, in order."""
+        seen: list[str] = []
+        for name in [r.author for r in self.revisions] + [c.author for c in self.comments]:
+            if name and name not in seen:
+                seen.append(name)
+        return tuple(seen)
+
+    @property
+    def dates(self) -> tuple[str, ...]:
+        return tuple(
+            sorted(
+                {d for d in [r.date for r in self.revisions] + [c.date for c in self.comments] if d}
+            )
+        )
+
+    @property
+    def is_empty(self) -> bool:
+        return not self.revisions and not self.comments
 
 
 def _count(text: str) -> str:
@@ -111,7 +174,7 @@ def revision_history(record: RevisionRecord) -> list[Finding]:
             basis=Basis.SELF_REPORTED,
             summary=(
                 f"the file records {tally}, by {people}{when}. A name here is "
-                "whatever the copy of Word was configured to say"
+                "whatever the application that wrote it was configured to say"
             ),
             human_sees="",
             machine_reads=", ".join(authors),

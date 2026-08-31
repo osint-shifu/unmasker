@@ -31,6 +31,10 @@ unmasker leaked.pdf
 > what was cropped off. Text under an image, reported separately because a scan
 > of a printed page looks the same and usually agrees with itself.
 >
+> OpenDocument as well as Word: `.odt` carries tracked changes, comments and
+> metadata of its own, and both of the parts that must not be read as body text
+> live *inside* the body there.
+>
 > Comments: in a Word document, and in a PDF, where they are annotations
 > hanging off the page rather than part of it and no text extraction reports
 > them. In a Word document also: text a tracked deletion took off the page and

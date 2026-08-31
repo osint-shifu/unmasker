@@ -30,8 +30,9 @@ touched the file, and when. One finding for the file, the same rule the DOCX
 tracked-change history follows, arriving in a different container.
 
 Everything here is `SELF_REPORTED`. That is what the class is for: a name in a
-.docx is whatever that copy of Word was configured to say, and the report says
-so rather than treating it as identification.
+document is whatever the application that wrote it was configured to say - Word,
+LibreOffice and every other editor take it from a preference somebody typed once
+- and the report says so rather than treating it as identification.
 """
 
 from __future__ import annotations
