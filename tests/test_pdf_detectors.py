@@ -15,8 +15,14 @@ import pytest
 from conftest import page_of
 
 from unmasker.findings import Basis
-from unmasker.pdf.detectors import covered_text, invisible_text
-from unmasker.pdf.geometry import BLACK, WHITE, Rect
+from unmasker.pdf.detectors import (
+    covered_text,
+    invisible_text,
+    low_contrast_text,
+    off_page_text,
+    text_under_image,
+)
+from unmasker.pdf.geometry import BLACK, WHITE, Colour, Rect
 from unmasker.pdf.interpreter import Glyph, InterpretedPage, Shape, TextRun, interpret_page
 
 PAGE = Rect(0, 0, 595, 842)
@@ -29,7 +35,7 @@ def glyphs(text: str, x: float = 100, y: float = 200, width: float = 10) -> tupl
     )
 
 
-def run(text: str, *, order: int = 0, mode: int = 0, **kw) -> TextRun:
+def run(text: str, *, order: int = 0, mode: int = 0, fill=BLACK, stroke=None, **kw) -> TextRun:
     gs = glyphs(text, **kw)
     return TextRun(
         text=text,
@@ -38,7 +44,8 @@ def run(text: str, *, order: int = 0, mode: int = 0, **kw) -> TextRun:
         font="F1",
         size=10,
         render_mode=mode,
-        fill=BLACK,
+        fill=fill,
+        stroke=stroke,
         order=order,
     )
 
@@ -281,3 +288,243 @@ def test_the_partial_specimen_leaves_the_last_word_of_each_value_legible():
     everything = " ".join(f.machine_reads for f in found)
     for legible in ("Testowa-Przyklad", "Warszawa"):
         assert legible not in everything
+
+
+# --------------------------------------------------------------------------
+# text in the colour of what is behind it
+# --------------------------------------------------------------------------
+
+NAVY = Colour((0.10, 0.23, 0.37), "rgb")
+
+
+def test_white_text_on_the_bare_page_is_reported():
+    """A PDF has no page colour; the background is the paper, and the paper is
+    white. White text on nothing is invisible and needs no shape to hide it."""
+    (found,) = low_contrast_text(page(run("INVISIBLE", fill=WHITE)))
+    assert found.detector == "low-contrast-text"
+    assert found.machine_reads == "INVISIBLE"
+    assert found.human_sees == ""
+
+
+def test_black_text_on_the_bare_page_is_not_reported():
+    assert low_contrast_text(page(run("VISIBLE", fill=BLACK))) == []
+
+
+def test_text_the_colour_of_a_box_drawn_behind_it_is_reported():
+    (found,) = low_contrast_text(
+        page(bar(90, 190, 320, 220, order=0, colour=NAVY), run("HIDDEN", order=1, fill=NAVY))
+    )
+    assert found.machine_reads == "HIDDEN"
+    assert "0.10" in found.summary or "#1a3b5e" in found.summary.lower()
+
+
+def test_the_same_text_on_a_box_of_another_colour_is_not_reported():
+    assert (
+        low_contrast_text(
+            page(bar(90, 190, 320, 220, order=0, colour=WHITE), run("READABLE", order=1, fill=NAVY))
+        )
+        == []
+    )
+
+
+def test_a_box_drawn_after_the_text_is_not_its_background():
+    """A shape painted later is on top. That is `covered_text`'s finding, and
+    calling it a colour match as well would be two names for one fact."""
+    assert (
+        low_contrast_text(
+            page(run("HIDDEN", order=0, fill=NAVY), bar(90, 190, 320, 220, order=1, colour=NAVY))
+        )
+        == []
+    )
+
+
+def test_the_topmost_background_wins():
+    """Two boxes behind the text: the later one is what the eye sees."""
+    assert (
+        low_contrast_text(
+            page(
+                bar(90, 190, 320, 220, order=0, colour=NAVY),
+                bar(90, 190, 320, 220, order=1, colour=WHITE),
+                run("READABLE", order=2, fill=NAVY),
+            )
+        )
+        == []
+    )
+
+
+def test_an_exact_colour_match_is_direct_and_a_near_one_is_circumstantial():
+    """A near match may still be legible on a good screen, so whether the gap
+    exists at all is a judgement. An exact match is not."""
+    (exact,) = low_contrast_text(page(run("A", fill=WHITE)))
+    (near,) = low_contrast_text(page(run("B", fill=Colour((0.97, 0.97, 0.97), "rgb"))))
+    assert exact.basis is Basis.DIRECT
+    assert near.basis is Basis.CIRCUMSTANTIAL
+
+
+def test_a_background_whose_colour_is_unreadable_is_not_assumed_to_be_paper():
+    """"We cannot tell what is behind this" and "it is white" are different
+    answers, and only one of them is true. A pattern fill gives the first."""
+    assert (
+        low_contrast_text(
+            page(
+                bar(90, 190, 320, 220, order=0, colour=None),
+                run("MAYBE", order=1, fill=WHITE),
+            )
+        )
+        == []
+    )
+
+
+def test_stroke_only_text_is_judged_on_its_stroke_colour():
+    """Render mode 1 draws outlines and never fills. Comparing its fill colour
+    to the background would judge a colour that is never put on the page."""
+    on_paper = page(run("OUTLINE", mode=1, fill=BLACK, stroke=WHITE))
+    (found,) = low_contrast_text(on_paper)
+    assert found.machine_reads == "OUTLINE"
+
+    visible = page(run("OUTLINE", mode=1, fill=WHITE, stroke=BLACK))
+    assert low_contrast_text(visible) == []
+
+
+def test_text_with_no_stated_colour_is_not_guessed_at():
+    assert low_contrast_text(page(run("UNKNOWN", fill=None))) == []
+
+
+def test_invisible_render_mode_is_not_also_a_colour_finding():
+    assert low_contrast_text(page(run("HIDDEN", mode=3, fill=WHITE))) == []
+
+
+# --------------------------------------------------------------------------
+# text outside the visible page
+# --------------------------------------------------------------------------
+
+
+def test_text_beyond_the_page_box_is_reported():
+    (found,) = off_page_text(page(run("OFFSTAGE", x=700, y=200)))
+    assert found.detector == "off-page-text"
+    assert found.basis is Basis.DIRECT
+    assert found.machine_reads == "OFFSTAGE"
+
+
+def test_text_below_the_page_box_is_reported():
+    (found,) = off_page_text(page(run("BELOW", x=100, y=-40)))
+    assert found.machine_reads == "BELOW"
+
+
+def test_text_on_the_page_is_not_reported():
+    assert off_page_text(page(run("ON PAGE", x=100, y=200))) == []
+
+
+def test_only_the_part_of_a_run_that_is_off_the_page_is_reported():
+    """A word straddling the edge is reported for the characters that fall off
+    it and no others - the same per-glyph rule the bar detectors use. The first
+    E still touches the page at x=585-595, so it is not among them."""
+    (found,) = off_page_text(page(run("EDGE", x=585, y=200)))
+    assert found.machine_reads == "DGE"
+
+
+def test_text_clipped_entirely_away_is_off_the_page_too():
+    """A glyph inside the paper but outside the clip in force when it was drawn
+    is exactly as invisible as one past the margin."""
+    clipped = TextRun(
+        text="CLIPPED",
+        glyphs=glyphs("CLIPPED", x=100, y=200),
+        bbox=Rect(100, 200, 170, 210),
+        font="F1",
+        size=10,
+        fill=BLACK,
+        clip=Rect(0, 400, 595, 842),
+        order=0,
+    )
+    (found,) = off_page_text(
+        InterpretedPage(number=1, box=PAGE, shapes=(), texts=(clipped,))
+    )
+    assert found.machine_reads == "CLIPPED"
+
+
+def test_a_glyph_merely_touching_the_edge_is_not_off_the_page():
+    """Only glyphs with no overlap at all count, which keeps this quiet on the
+    ordinary documents the tool will mostly be pointed at."""
+    assert off_page_text(page(run("AB", x=575, y=200))) == []
+
+
+# --------------------------------------------------------------------------
+# text under an image
+# --------------------------------------------------------------------------
+
+
+def image(x0, y0, x1, y1, *, order: int = 1) -> Shape:
+    return Shape(
+        kind="image",
+        operator="Do",
+        points=((x0, y0), (x1, y1)),
+        bbox=Rect(x0, y0, x1, y1),
+        colour=None,
+        clip=PAGE,
+        order=order,
+    )
+
+
+def test_text_under_an_image_is_its_own_finding():
+    (found,) = text_under_image(page(run("BENEATH", order=0), image(95, 195, 300, 215)))
+    assert found.detector == "text-under-image"
+    assert found.machine_reads == "BENEATH"
+
+
+def test_text_under_an_image_is_not_also_reported_as_under_a_shape():
+    assert covered_text(page(run("BENEATH", order=0), image(95, 195, 300, 215))) == []
+
+
+def test_the_scanned_page_explanation_is_named_rather_than_ruled_out():
+    """A page image with a text layer beneath it is what a scanner produces,
+    and the two usually agree. The tool says so instead of implying a motive."""
+    (found,) = text_under_image(page(run("BENEATH", order=0), image(95, 195, 300, 215)))
+    assert "scan" in found.summary.lower()
+
+
+# --------------------------------------------------------------------------
+# the hidden-in-plain-sight specimen
+# --------------------------------------------------------------------------
+
+PLAIN = "libreoffice-writer-hidden-in-plain-sight.pdf"
+
+
+def test_the_white_line_and_the_line_on_its_box_are_both_reported():
+    found = low_contrast_text(interpret_page(page_of(PLAIN)))
+    reads = [f.machine_reads for f in found]
+    assert any("simply white" in r for r in reads)
+    assert any("colour of the box" in r for r in reads)
+
+
+def test_the_ordinary_black_line_of_that_specimen_is_not_reported():
+    found = low_contrast_text(interpret_page(page_of(PLAIN)))
+    assert not any("must not be reported" in f.machine_reads for f in found)
+
+
+def test_the_line_below_the_crop_box_is_reported():
+    (found,) = off_page_text(interpret_page(page_of(PLAIN)))
+    assert "below the crop box" in found.machine_reads
+
+
+def test_that_specimen_has_nothing_covered_and_nothing_invisible():
+    """It hides everything by colour and position. A detector that fires on it
+    for the wrong reason has found the right file for the wrong cause."""
+    interpreted = interpret_page(page_of(PLAIN))
+    assert covered_text(interpreted) == []
+    assert invisible_text(interpreted) == []
+
+
+@pytest.mark.parametrize(
+    "specimen",
+    [
+        "libreoffice-writer-black-bars.pdf",
+        "chrome-print-css-overlay.pdf",
+        "libreoffice-writer-properly-redacted.pdf",
+        "libreoffice-writer-partial-bars.pdf",
+    ],
+)
+def test_the_bar_specimens_have_no_colour_or_position_findings(specimen):
+    """The new detectors must stay silent on the files the old ones handle."""
+    interpreted = interpret_page(page_of(specimen))
+    assert low_contrast_text(interpreted) == []
+    assert off_page_text(interpreted) == []

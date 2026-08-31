@@ -215,9 +215,7 @@ def test_the_partial_specimen_reports_only_the_covered_words(capsys):
     code, out, _ = run(capsys, str(SPECIMENS / "libreoffice-writer-partial-bars.pdf"), "--json")
     assert code == 1
     doc = json.loads(out)
-    reads = " ".join(
-        f["machine_reads"] for f in doc["findings"] if f["detector"] == "covered-text"
-    )
+    reads = " ".join(f["machine_reads"] for f in doc["findings"] if f["detector"] == "covered-text")
     assert "Wanda" in reads
     assert "Testowa-Przyklad" not in reads
     assert "Warszawa" not in reads
@@ -246,3 +244,18 @@ def test_the_docx_specimen_shows_the_disguised_extension(capsys):
     _, out, _ = run(capsys, str(docx / "libreoffice-writer-hidden-characters.docx"))
     assert "quarterly-reportexe.pdf" in out
     assert "U+202E" in out
+
+
+def test_an_empty_reading_says_nothing_rather_than_printing_a_blank(capsys):
+    """For white-on-white text a human sees nothing at all, and that is the
+    finding. A blank column reads as a rendering fault instead of a statement."""
+    _, out, _ = run(capsys, str(SPECIMENS / "libreoffice-writer-hidden-in-plain-sight.pdf"))
+    assert "nothing on the page" in out
+    assert "simply white" in out
+
+
+def test_the_hidden_in_plain_sight_specimen_exits_non_zero(capsys):
+    code, out, _ = run(capsys, str(SPECIMENS / "libreoffice-writer-hidden-in-plain-sight.pdf"))
+    assert code == 1
+    assert "low-contrast-text" in out
+    assert "off-page-text" in out

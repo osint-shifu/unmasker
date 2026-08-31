@@ -76,6 +76,19 @@ def _field(style: Style, label: str, value: str, label_width: int) -> list[str]:
     indent = LEFT + label_width + 2
     room = max(20, style.width - indent)
 
+    if not value:
+        # An empty reading is a statement, not a gap in the output: for
+        # white-on-white text a human sees nothing at all, and a blank column
+        # reads as a rendering fault rather than as the finding.
+        return [
+            MARGIN
+            + gutter
+            + " "
+            + style.ink(label.ljust(label_width), FAINT)
+            + "  "
+            + style.ink("nothing on the page", FAINT)
+        ]
+
     lines = textwrap.wrap(
         value,
         width=room,

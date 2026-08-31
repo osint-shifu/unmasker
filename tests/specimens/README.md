@@ -21,12 +21,16 @@ which RFC 2606 reserves for the purpose.
 | [`pdf/libreoffice-writer-properly-redacted.pdf`](pdf/libreoffice-writer-properly-redacted.md) | LibreOffice 24.2 Writer | four black bars | nothing — control |
 | [`pdf/flattened-to-image.pdf`](pdf/flattened-to-image.md) | Ghostscript `pdfimage24` | four black bars | no text layer at all — control |
 | [`pdf/libreoffice-writer-partial-bars.pdf`](pdf/libreoffice-writer-partial-bars.md) | LibreOffice 24.2 Writer | four bars dragged too short | the covered words, and only those |
+| [`pdf/libreoffice-writer-hidden-in-plain-sight.pdf`](pdf/libreoffice-writer-hidden-in-plain-sight.md) | LibreOffice 24.2 Writer, cropped with pypdf | one readable line and a navy bar | three lines hidden by colour and by position |
 | [`docx/libreoffice-writer-hidden-characters.docx`](docx/libreoffice-writer-hidden-characters.md) | LibreOffice 24.2 Writer | four ordinary lines | a zero-width space, an override, a hidden instruction, a homoglyph |
 
-The first two are failed redactions and must be found — by tier 1, which is not
-built yet. The next two must not be reported as findings, and for different
-reasons: one was redacted correctly, the other has nothing to search. The DOCX
-is the tier-2 specimen, and every tier-2 detector fires on it exactly once.
+The first two are failed redactions. The next two must not be reported, and for
+different reasons: one was redacted correctly, the other has nothing to search.
+The partial-bars file holds the detector honest about *how much* a bar covers.
+The hidden-in-plain-sight file has nothing drawn over anything — everything it
+hides, it hides by colour or by position — so every bar detector must stay
+silent on it. The DOCX is the tier-2 specimen, and every tier-2 detector fires
+on it exactly once.
 
 ## Rebuilding them
 
@@ -48,6 +52,12 @@ Named here so their absence is not mistaken for coverage:
   covered. `libreoffice-writer-partial-bars.pdf` closed the partial-coverage
   gap, but every bar in it stops in a gap between words; the genuinely
   ambiguous edge is still untested.
+- **Text outside the MediaBox.** LibreOffice refuses to emit it, so the
+  off-page case is represented only by a CropBox smaller than the MediaBox.
+  Another producer is needed for the other half.
+- **Text hidden behind a shading or a pattern.** `low-contrast-text` reports
+  nothing when it cannot read the background colour, which is the honest answer
+  and also an untested one.
 - **Rotated or vertically-set text.** Lines are grouped by the bottom of the
   glyph box, which is exact for horizontal text and wrong for anything else.
 - **Producers not on this machine.** Acrobat and Word draw their own way, and

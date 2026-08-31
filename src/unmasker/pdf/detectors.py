@@ -40,7 +40,7 @@ it covers were settled by poppler rather than by anything here.
 from __future__ import annotations
 
 from ..findings import Basis, Finding, Location
-from .geometry import Colour, Rect
+from .geometry import WHITE, Colour, Rect
 from .interpreter import Glyph, InterpretedPage, Shape, TextRun
 
 # How much of a glyph a shape must cover before the glyph counts as hidden.
@@ -50,11 +50,20 @@ COVERAGE = 0.55
 
 # Render modes that put ink on the page. 3 is invisible, 7 is clip-only.
 PAINTING_MODES = frozenset({0, 1, 2, 4, 5, 6})
+STROKE_ONLY_MODES = frozenset({1, 5})
+
+# How close two colours have to be before the text stops being readable. Chosen
+# to catch #f8f8f8 on white, which no eye resolves, and to leave #e0e0e0 alone,
+# which is a legible light grey. The measured difference goes in the summary
+# either way, so a reader who would draw the line elsewhere can see where it
+# actually fell.
+CONTRAST = 0.08
+EXACT = 0.005
 
 
-def _covers(shape: Shape, page: Rect) -> bool:
+def _covers(shape: Shape, page: Rect, kinds: tuple[str, ...] = ("fill",)) -> bool:
     """Whether this shape could hide anything under it."""
-    if shape.kind not in ("fill", "image"):
+    if shape.kind not in kinds:
         return False
     if not shape.is_opaque:
         return False
@@ -67,8 +76,11 @@ def _hidden(glyph: Glyph, box: Rect) -> bool:
     return glyph.bbox.intersect(box).area >= glyph.bbox.area * COVERAGE
 
 
-def _appearance(colour: Colour | None) -> tuple[str, str]:
-    """The block to draw for this fill, and what to call it in words."""
+def _appearance(shape: Shape) -> tuple[str, str]:
+    """The block to draw for this shape, and what to call it in words."""
+    if shape.kind == "image":
+        return "▒", "an image"
+    colour = shape.colour
     if colour is None:
         return "▒", "a shape whose colour this file does not state plainly"
     if colour.luminance < 0.25:
@@ -131,7 +143,27 @@ def _spans(glyphs: list[Glyph], covered: list[bool]) -> list[tuple[int, int]]:
 
 def covered_text(page: InterpretedPage) -> list[Finding]:
     """Every place a shape is painted over text that is still in the file."""
-    shapes = [s for s in page.shapes if _covers(s, page.box)]
+    return _under(page, ("fill",), "covered-text")
+
+
+def text_under_image(page: InterpretedPage) -> list[Finding]:
+    """Text with an image painted over it.
+
+    Split from `covered_text` because the innocent explanation is different and
+    common: a scanned page carries an image of the paper with a text layer
+    beneath it, and the two normally say the same thing. That is still a gap
+    between what a reader sees and what a parser gets, so it is reported - but
+    the report names the explanation instead of implying a motive.
+
+    A page-sized image is excluded before this by the size rule, so the whole
+    scanned-page case does not reach here at all; what does is a smaller image
+    placed over text, which is a different act.
+    """
+    return _under(page, ("image",), "text-under-image")
+
+
+def _under(page: InterpretedPage, kinds: tuple[str, ...], detector: str) -> list[Finding]:
+    shapes = [s for s in page.shapes if _covers(s, page.box, kinds)]
     if not shapes:
         return []
 
@@ -140,7 +172,7 @@ def covered_text(page: InterpretedPage) -> list[Finding]:
 
     for shape in shapes:
         box = shape.visible_bbox
-        block, described = _appearance(shape.colour)
+        block, described = _appearance(shape)
 
         for line in lines:
             glyphs = [g for g, _ in line]
@@ -175,7 +207,16 @@ def covered_text(page: InterpretedPage) -> list[Finding]:
                         covered_box.y1,
                         covered_box.x0,
                         _finding(
-                            shape, estimated, glyphs, start, stop, text, block, described, page
+                            shape,
+                            estimated,
+                            glyphs,
+                            start,
+                            stop,
+                            text,
+                            block,
+                            described,
+                            page,
+                            detector,
                         ),
                     )
                 )
@@ -186,7 +227,9 @@ def covered_text(page: InterpretedPage) -> list[Finding]:
     return [finding for _, _, finding in placed]
 
 
-def _finding(shape, estimated, glyphs, start, stop, text, block, described, page) -> Finding:
+def _finding(
+    shape, estimated, glyphs, start, stop, text, block, described, page, detector
+) -> Finding:
     rest = "".join(g.char for g in glyphs[:start]) + "".join(g.char for g in glyphs[stop:])
 
     where = (
@@ -194,6 +237,11 @@ def _finding(shape, estimated, glyphs, start, stop, text, block, described, page
         f"y {shape.visible_bbox.y0:.1f}-{shape.visible_bbox.y1:.1f}"
     )
     summary = f"{len(text)} characters under {described} at {where}"
+    if shape.kind == "image":
+        summary += (
+            "; an image over a text layer is also what a scan of a printed page "
+            "looks like, and there the two normally agree"
+        )
     if rest.strip():
         summary += f'; the rest of the line still reads "{_readable(rest)}"'
     if estimated:
@@ -203,7 +251,7 @@ def _finding(shape, estimated, glyphs, start, stop, text, block, described, page
         )
 
     return Finding(
-        detector="covered-text",
+        detector=detector,
         basis=Basis.DIRECT,
         summary=summary,
         human_sees=block * len(text),
@@ -249,4 +297,161 @@ def detect(page: InterpretedPage) -> list[Finding]:
     Additive, and nothing here ranks one against another: a page can have a bar
     over its text *and* an invisible run, and those are two findings.
     """
-    return covered_text(page) + invisible_text(page)
+    return (
+        covered_text(page)
+        + text_under_image(page)
+        + invisible_text(page)
+        + low_contrast_text(page)
+        + off_page_text(page)
+    )
+
+
+def _background(page: InterpretedPage, glyph: Glyph, run: TextRun) -> Colour | None:
+    """The colour the eye sees behind one glyph.
+
+    The topmost opaque shape painted *before* the run and containing the glyph.
+    Where there is none the background is the paper, and a PDF has no page
+    colour - the paper is white, and white text on nothing is invisible without
+    any shape being involved.
+
+    Returns None when a shape is there but its colour is not readable, because
+    "we cannot tell what is behind this" and "it is white" are different
+    answers and only one of them is true.
+    """
+    best: Shape | None = None
+    for shape in page.shapes:
+        if shape.kind != "fill" or shape.order >= run.order or not shape.is_opaque:
+            continue
+        if not shape.visible_bbox.intersect(glyph.bbox).area >= glyph.bbox.area * COVERAGE:
+            continue
+        if best is None or shape.order > best.order:
+            best = shape
+    if best is None:
+        return WHITE
+    return best.colour
+
+
+def _ink(run: TextRun) -> Colour | None:
+    """The colour this run is painted in, for the mode it is painted in."""
+    return run.stroke if run.render_mode in STROKE_ONLY_MODES else run.fill
+
+
+def _hex(colour: Colour) -> str:
+    return "#" + "".join(f"{round(c * 255):02x}" for c in colour.rgb)
+
+
+def low_contrast_text(page: InterpretedPage) -> list[Finding]:
+    """Text painted in the colour of whatever is behind it.
+
+    Nothing is drawn over it; it is simply the same colour as its background,
+    which hides it from a reader and from nobody else.
+
+    An exact match is `DIRECT` - the text provably cannot be distinguished. A
+    near match is `CIRCUMSTANTIAL`, because a difference this small may still
+    be legible on a good screen and because light grey is a legitimate way to
+    set a watermark. The measured difference is in the summary either way.
+    """
+    findings: list[Finding] = []
+    for run in page.texts:
+        if run.render_mode not in PAINTING_MODES:
+            continue  # invisible_text's finding, not this one
+        ink = _ink(run)
+        if ink is None or not run.text.strip():
+            continue
+
+        glyphs = list(run.glyphs)
+        behind = [_background(page, g, run) for g in glyphs]
+        gaps = [
+            None if b is None else max(abs(x - y) for x, y in zip(ink.rgb, b.rgb, strict=True))
+            for b in behind
+        ]
+        flags = [g is not None and g <= CONTRAST for g in gaps]
+
+        for start, stop in _spans(glyphs, flags):
+            text = "".join(g.char for g in glyphs[start:stop])
+            if not text.strip():
+                continue
+            worst = max(gaps[i] for i in range(start, stop))
+            paper = behind[start]
+            findings.append(
+                Finding(
+                    detector="low-contrast-text",
+                    basis=Basis.DIRECT if worst <= EXACT else Basis.CIRCUMSTANTIAL,
+                    summary=(
+                        f"{len(text)} characters painted {_hex(ink)} on "
+                        f"{_hex(paper)}"
+                        + (
+                            ", the same colour"
+                            if worst <= EXACT
+                            else f", a difference of {worst:.3f} on the strongest channel"
+                        )
+                        + (
+                            "; nothing is drawn over this text, and the background "
+                            "is the paper itself"
+                            if _is_paper(page, glyphs[start], run)
+                            else "; the background is a shape painted before it"
+                        )
+                    ),
+                    human_sees="",
+                    machine_reads=text,
+                    location=Location(page=page.number),
+                    codepoints=tuple(f"U+{ord(c):04X}" for c in text),
+                )
+            )
+    return findings
+
+
+def _is_paper(page: InterpretedPage, glyph: Glyph, run: TextRun) -> bool:
+    for shape in page.shapes:
+        if shape.kind != "fill" or shape.order >= run.order or not shape.is_opaque:
+            continue
+        if shape.visible_bbox.intersect(glyph.bbox).area >= glyph.bbox.area * COVERAGE:
+            return False
+    return True
+
+
+def off_page_text(page: InterpretedPage) -> list[Finding]:
+    """Text positioned where no viewer will show it.
+
+    Outside the page box - which is the CropBox where a file has one, and a
+    CropBox smaller than the MediaBox is the ordinary way a PDF is trimmed
+    without anything being removed - or outside the clip in force when it was
+    drawn.
+
+    A glyph counts only when it has *no* overlap at all with the visible area.
+    Half a word past a margin is a layout accident, and reporting those would
+    make the detector fire on most of the documents it is ever pointed at.
+    """
+    findings: list[Finding] = []
+    for run in page.texts:
+        if not run.text.strip():
+            continue
+        visible = page.box.intersect(run.clip) if run.clip else page.box
+        glyphs = list(run.glyphs)
+        flags = [not g.bbox.overlaps(visible) for g in glyphs]
+
+        for start, stop in _spans(glyphs, flags):
+            text = "".join(g.char for g in glyphs[start:stop])
+            if not text.strip():
+                continue
+            box = Rect.from_points(
+                [(g.bbox.x0, g.bbox.y0) for g in glyphs[start:stop]]
+                + [(g.bbox.x1, g.bbox.y1) for g in glyphs[start:stop]]
+            )
+            findings.append(
+                Finding(
+                    detector="off-page-text",
+                    basis=Basis.DIRECT,
+                    summary=(
+                        f"{len(text)} characters at x {box.x0:.1f}-{box.x1:.1f}, "
+                        f"y {box.y0:.1f}-{box.y1:.1f}, entirely outside the visible "
+                        f"area x {visible.x0:.1f}-{visible.x1:.1f}, "
+                        f"y {visible.y0:.1f}-{visible.y1:.1f}"
+                    ),
+                    human_sees="",
+                    machine_reads=text,
+                    location=Location(page=page.number),
+                    codepoints=tuple(f"U+{ord(c):04X}" for c in text),
+                )
+            )
+    return findings
