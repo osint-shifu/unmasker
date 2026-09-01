@@ -37,6 +37,8 @@ which RFC 2606 reserves for the purpose.
 | [`xlsx/libreoffice-calc-hidden-columns.xlsx`](xlsx/libreoffice-calc-hidden-columns.md) | LibreOffice 24.2 Calc | a tender evaluation, columns A B C E F | a hidden column, a hidden row, a hidden sheet and a candid comment |
 | [`ods/libreoffice-calc-hidden-columns.ods`](ods/libreoffice-calc-hidden-columns.md) | LibreOffice 24.2 Calc | the same evaluation | the same four, stated the other family's way |
 | [`ods/libreoffice-calc-filtered-rows.ods`](ods/libreoffice-calc-filtered-rows.md) | LibreOffice 24.2 Calc | two open cases | two more the filter is holding back |
+| [`ods/libreoffice-calc-tracked-changes.ods`](ods/libreoffice-calc-tracked-changes.md) | LibreOffice 24.2 Calc | a bid of 198 000 | the 240 000 it replaced, and who edited it |
+| [`xlsx/libreoffice-calc-tracked-changes.xlsx`](xlsx/libreoffice-calc-tracked-changes.md) | LibreOffice 24.2 Calc | the same bid | the same three changes, in a revision log of three parts |
 
 Every specimen that hides text *on the page* is also found by `--ocr`, which
 renders the page and reads the picture back and knows none of the mechanisms —
@@ -117,8 +119,11 @@ Named here so their absence is not mistaken for coverage:
 - **An `autoFilter` element**, which records what a filter was set to.
   LibreOffice's ODS writes none, and its .xlsx export drops the filter/hidden
   distinction altogether.
-- **A spreadsheet's tracked changes.** ODF carries `table:tracked-changes` with
-  cell-content changes in it, and nothing here reads or tests one.
+- **A tracked deletion that kept its cells.** Both formats allow the removed
+  content to be stored with the deletion; neither producer here writes any, so
+  a deletion always quotes nothing and the other path is untested.
+- **A tracked insertion**, and a formatting-only revision (`rfmt`), which is
+  the spreadsheet's `w:rPrChange`.
 - **Excel and Word themselves.** Neither is on this machine, so every OOXML
   file here was written by LibreOffice.
 - **Presentations.** `.pptx` and `.odp` are the same containers again, with

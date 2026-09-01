@@ -26,6 +26,19 @@ with authors held in a separate list and referenced by position. They are the
 same finding a Word comment and a PDF annotation produce, so they come back as
 the `Comment` the shared revision record already defines.
 
+Change tracking lives in `xl/revisions/`, which only a shared workbook has, and
+it is the part of this format most easily read wrongly. Three things about it:
+
+- **It is one log part per editing session**, each reached by relationship from
+  `revisionHeaders.xml`. Reading `revisionLog1.xml` and stopping reports one
+  change out of however many there are, and gives no sign of having stopped.
+- **The author and the date are on the header**, not on the change, so an
+  `rcc` read on its own has nobody attached to it.
+- **`<nc>` holds the old value.** LibreOffice writes the "new cell" element
+  with the *previous* contents, so a reader that believed the log would report
+  a cell that changed from 240000 to 240000. The current value comes out of the
+  sheet, which is where a person would look.
+
 No new dependency: an .xlsx is a zip of XML and both are in the standard
 library.
 """
@@ -37,7 +50,7 @@ import zipfile
 from xml.etree import ElementTree
 
 from ..revisions import Comment
-from ..sheets import Cell, Sheet, SheetRecord
+from ..sheets import Cell, CellChange, Sheet, SheetRecord, TrackedDeletion
 
 MAIN = "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}"
 DOC_REL = "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}"
@@ -184,6 +197,92 @@ def _read_comments(archive: zipfile.ZipFile, part: str) -> list[Comment]:
     return found
 
 
+def _row_of(reference: str) -> int:
+    digits = "".join(c for c in reference if c.isdigit())
+    return int(digits) if digits else 0
+
+
+def _read_revision_log(
+    archive: zipfile.ZipFile, sheet_of: dict[str, str]
+) -> tuple[list[CellChange], list[TrackedDeletion], list[str]]:
+    """Cell changes out of `xl/revisions/`, which only a shared workbook has.
+
+    The log holds one `rcc` per changed cell, with `oc` for the old cell and
+    `nc` for the new one. **`nc` is not trusted**: LibreOffice's export writes
+    the *old* value into it, so a reader that believed the log would report a
+    cell that changed from 240000 to 240000. The current value is read out of
+    the sheet instead, which is where a person would look.
+
+    Who and when live in `revisionHeaders.xml` rather than on the change, one
+    header per editing session, so they are matched by the relationship the
+    header points at.
+    """
+    names = set(archive.namelist())
+    headers = "xl/revisions/revisionHeaders.xml"
+    if headers not in names:
+        return [], [], []
+
+    try:
+        root = ElementTree.fromstring(archive.read(headers))
+    except ElementTree.ParseError as exc:
+        return [], [], [f"{headers} is not well-formed XML and was skipped: {exc}"]
+
+    targets = _relationships(archive, headers)
+    changes: list[CellChange] = []
+    deletions: list[TrackedDeletion] = []
+    remarks: list[str] = []
+    for header in root.iter(f"{MAIN}header"):
+        part = targets.get(header.get(f"{DOC_REL}id") or "")
+        if part is None or part not in names:
+            continue
+        author = header.get("userName") or None
+        date = header.get("dateTime") or None
+        try:
+            log = ElementTree.fromstring(archive.read(part))
+        except ElementTree.ParseError as exc:
+            remarks.append(f"{part} is not well-formed XML and was skipped: {exc}")
+            continue
+
+        for change in log.iter(f"{MAIN}rcc"):
+            old = change.find(f"{MAIN}oc")
+            if old is None:
+                continue
+            reference = old.get("r") or ""
+            value = old.find(f"{MAIN}v")
+            text = (value.text or "") if value is not None else ""
+            if not text:
+                # A string previous value is `t="inlineStr"` with an `<is>`,
+                # where a numeric one is `t="n"` with a `<v>`. Both forms
+                # appear in one log, so both have to be read.
+                node = old.find(f"{MAIN}is")
+                if node is not None:
+                    text = "".join(t.text or "" for t in node.iter(f"{MAIN}t"))
+            changes.append(
+                CellChange(
+                    sheet=sheet_of.get(change.get("sId") or "", "(unnamed)"),
+                    row=_row_of(reference),
+                    column=_column_of(reference),
+                    previous=text,
+                    author=author,
+                    date=date,
+                )
+            )
+
+        for deletion in log.iter(f"{MAIN}rrc"):
+            where = deletion.get("ref") or "an unstated range"
+            sheet = sheet_of.get(deletion.get("sId") or "", "(unnamed)")
+            deletions.append(
+                TrackedDeletion(sheet=sheet, where=where, author=author, date=date)
+            )
+            remarks.append(
+                f"a tracked {deletion.get('action') or 'deletion'} at {where} "
+                f"by {author or 'an editor the file does not name'} carries no content "
+                "in this file, so there is nothing to quote"
+            )
+
+    return changes, deletions, remarks
+
+
 def read_sheets(archive: zipfile.ZipFile) -> tuple[SheetRecord, tuple[Comment, ...]]:
     names = set(archive.namelist())
     if WORKBOOK not in names:
@@ -200,8 +299,13 @@ def read_sheets(archive: zipfile.ZipFile) -> tuple[SheetRecord, tuple[Comment, .
     sheets: list[Sheet] = []
     comments: list[Comment] = []
     remarks: list[str] = []
+    # `rcc sId="1"` names a sheet by its `sheetId`, which is not its position
+    # and not its name. A reader that used the index would report the change
+    # against whichever sheet happened to be there.
+    sheet_of: dict[str, str] = {}
     for entry in book.iter(f"{MAIN}sheet"):
         name = entry.get("name") or "(unnamed)"
+        sheet_of[entry.get("sheetId") or ""] = name
         hidden = HIDDEN_STATES.get((entry.get("state") or "").strip())
         part = targets.get(entry.get(f"{DOC_REL}id") or "")
         if part is None or part not in names:
@@ -220,4 +324,15 @@ def read_sheets(archive: zipfile.ZipFile) -> tuple[SheetRecord, tuple[Comment, .
             continue
         comments.extend(_read_comments(archive, part))
 
-    return SheetRecord(sheets=tuple(sheets), remarks=tuple(remarks)), tuple(comments)
+    changes, deletions, log_remarks = _read_revision_log(archive, sheet_of)
+    remarks.extend(log_remarks)
+
+    return (
+        SheetRecord(
+            sheets=tuple(sheets),
+            changes=tuple(changes),
+            deletions=tuple(deletions),
+            remarks=tuple(remarks),
+        ),
+        tuple(comments),
+    )

@@ -44,7 +44,7 @@ import zipfile
 from xml.etree import ElementTree
 
 from ..revisions import Comment
-from ..sheets import Cell, Sheet, SheetRecord
+from ..sheets import Cell, CellChange, Sheet, SheetRecord, TrackedDeletion
 
 TABLE = "{urn:oasis:names:tc:opendocument:xmlns:table:1.0}"
 TEXT = "{urn:oasis:names:tc:opendocument:xmlns:text:1.0}"
@@ -191,6 +191,103 @@ def _read_table(table, hidden: str | None) -> tuple[Sheet, list[Comment]]:
     return sheet, comments
 
 
+def _change_info(node) -> tuple[str | None, str | None]:
+    info = node.find(f"{OFFICE}change-info")
+    if info is None:
+        return None, None
+    creator = info.find(f"{DC}creator")
+    date = info.find(f"{DC}date")
+    return (
+        (creator.text or None) if creator is not None else None,
+        (date.text or None) if date is not None else None,
+    )
+
+
+def _previous_value(node) -> str:
+    """The value a tracked change took out of the cell.
+
+    LibreOffice writes it **two different ways depending on its type**, and a
+    reader that knows one of them reads half the changes and then reports the
+    file as though that were all of them:
+
+        a number   <table:change-track-table-cell office:value="240000"/>
+                   - the `<text:p>` the source had is stripped
+        a string   <table:change-track-table-cell><text:p>rejected</text:p>
+                   - and no `office:value` at all
+
+    Measured against a file LibreOffice wrote, not read out of the
+    specification, which describes both and says nothing about which appears.
+    """
+    for cell in node.iter(f"{TABLE}change-track-table-cell"):
+        paragraphs = " ".join("".join(p.itertext()) for p in cell.iter(f"{TEXT}p")).strip()
+        if paragraphs:
+            return paragraphs
+        value = cell.get(f"{OFFICE}value")
+        if value is not None:
+            return value
+    return ""
+
+
+def _read_tracked_changes(
+    root, names: list[str]
+) -> tuple[list[CellChange], list[TrackedDeletion], list[str]]:
+    changes: list[CellChange] = []
+    deletions: list[TrackedDeletion] = []
+    remarks: list[str] = []
+    for tracked in root.iter(f"{TABLE}tracked-changes"):
+        for change in tracked.iter(f"{TABLE}cell-content-change"):
+            address = change.find(f"{TABLE}cell-address")
+            if address is None:
+                continue
+            try:
+                # ODF counts both from zero. Passing that on would send a
+                # reader to the cell above and to the left of the one that
+                # changed.
+                row = int(address.get(f"{TABLE}row", "0")) + 1
+                column = int(address.get(f"{TABLE}column", "0")) + 1
+                table = int(address.get(f"{TABLE}table", "0"))
+            except ValueError:
+                continue
+            author, date = _change_info(change)
+            changes.append(
+                CellChange(
+                    sheet=names[table] if 0 <= table < len(names) else "(unnamed)",
+                    row=row,
+                    column=column,
+                    previous=_previous_value(change),
+                    author=author,
+                    date=date,
+                )
+            )
+
+        for deletion in tracked.iter(f"{TABLE}deletion"):
+            author, date = _change_info(deletion)
+            kind = deletion.get(f"{TABLE}type") or "region"
+            where = deletion.get(f"{TABLE}position") or "an unstated position"
+            try:
+                table = int(deletion.get(f"{TABLE}table", "0"))
+            except ValueError:
+                table = 0
+            # LibreOffice writes the author, the date and the position, and no
+            # cells at all. A finding that quotes nothing teaches a reader to
+            # skip findings, so this is remarked on and counted into the
+            # history rather than reported.
+            deletions.append(
+                TrackedDeletion(
+                    sheet=names[table] if 0 <= table < len(names) else "(unnamed)",
+                    where=f"{kind} {where}",
+                    author=author,
+                    date=date,
+                )
+            )
+            remarks.append(
+                f"a tracked {kind} deletion at position {where} by "
+                f"{author or 'an editor the file does not name'} carries no "
+                "content in this file, so there is nothing to quote"
+            )
+    return changes, deletions, remarks
+
+
 def read_sheets(archive: zipfile.ZipFile) -> tuple[SheetRecord, tuple[Comment, ...]]:
     if "content.xml" not in archive.namelist():
         return SheetRecord(remarks=("the file has no content.xml and was not read",)), ()
@@ -211,4 +308,16 @@ def read_sheets(archive: zipfile.ZipFile) -> tuple[SheetRecord, tuple[Comment, .
             sheets.append(sheet)
             comments.extend(found)
 
-    return SheetRecord(sheets=tuple(sheets)), tuple(comments)
+    # After the sheets, because a change names its table by index and the
+    # report has to give a reader a name they can act on.
+    changes, deletions, remarks = _read_tracked_changes(root, [s.name for s in sheets])
+
+    return (
+        SheetRecord(
+            sheets=tuple(sheets),
+            changes=tuple(changes),
+            deletions=tuple(deletions),
+            remarks=tuple(remarks),
+        ),
+        tuple(comments),
+    )

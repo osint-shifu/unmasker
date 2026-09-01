@@ -112,6 +112,7 @@ numbers are gone.
 | `hidden-rows` | rows nobody sees, collapsed into one finding per block, because hiding rows 10 to 40 is one act by one person |
 | `hidden-columns` | the same by column, addressed the way the person who hid it saw it: `column D`, not an index |
 | `filtered-rows` | rows a filter is holding back rather than a person having hidden them — a weaker claim, and reported as one |
+| `changed-cell` | what change tracking took out of a cell and left in the file, with who changed it and when — the one finding here whose **both** columns carry text, because the current value is sitting in the cell |
 
 ### In the container
 

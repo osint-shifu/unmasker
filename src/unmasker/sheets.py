@@ -98,13 +98,67 @@ class Sheet:
 
 
 @dataclass(frozen=True)
+class CellChange:
+    """A cell's earlier value, kept in the file by change tracking.
+
+    The same statement `w:delText` makes in a Word document, arriving through a
+    container that has cells instead of paragraphs - and with one difference
+    that shows in the report. A tracked deletion has nothing on the page to sit
+    beside, so its `human sees` column is empty. A changed cell has the current
+    value sitting in it, so this is the one finding in the project where both
+    columns carry real text.
+    """
+
+    sheet: str
+    row: int
+    column: int
+    previous: str
+    author: str | None
+    date: str | None
+
+
+@dataclass(frozen=True)
+class TrackedDeletion:
+    """A row or column change tracking removed, and did not keep.
+
+    Both producers write the author, the date and the position, and no cells at
+    all - so this quotes nothing and is not a finding. It is remarked on, and
+    counted into the revision history, which is what `w:rPrChange` taught: a
+    finding that quotes nothing teaches a reader to skip findings.
+    """
+
+    sheet: str
+    where: str
+    author: str | None
+    date: str | None
+
+
+@dataclass(frozen=True)
 class SheetRecord:
     sheets: tuple[Sheet, ...] = ()
+    changes: tuple[CellChange, ...] = ()
+    deletions: tuple[TrackedDeletion, ...] = ()
     remarks: tuple[str, ...] = field(default_factory=tuple)
 
     @property
     def is_empty(self) -> bool:
         return not self.sheets
+
+    def value_at(self, sheet: str, row: int, column: int) -> str:
+        """What is in that cell now, for the other half of the finding.
+
+        Read out of the sheet rather than out of the revision log, because
+        LibreOffice's .xlsx export writes the *old* value into the log's "new
+        cell" element. Trusting it would report a cell that changed from
+        240000 to 240000, a finding that contradicts itself on its own line.
+        """
+        for candidate in self.sheets:
+            if candidate.name != sheet:
+                continue
+            for cell in candidate.cells:
+                if cell.row == row and cell.column == column:
+                    return cell.text
+        return ""
 
 
 def column_name(index: int) -> str:
@@ -251,6 +305,31 @@ def hidden_columns(record: SheetRecord) -> list[Finding]:
     )
 
 
+def changed_cells(record: SheetRecord) -> list[Finding]:
+    """Values change tracking took out of a cell and left in the file."""
+    findings = []
+    for change in record.changes:
+        if not change.previous.strip():
+            continue
+        who = change.author or "an editor the file does not name"
+        when = f" on {change.date}" if change.date else ", at a time the file does not state"
+        findings.append(
+            Finding(
+                detector="changed-cell",
+                basis=Basis.DIRECT,
+                summary=(
+                    f'cell {column_name(change.column)}{change.row} of sheet '
+                    f'"{change.sheet}" was changed by {who}{when}; the earlier '
+                    "value is still in the file"
+                ),
+                human_sees=record.value_at(change.sheet, change.row, change.column),
+                machine_reads=change.previous,
+                location=Location(),
+            )
+        )
+    return findings
+
+
 def detect(record: SheetRecord) -> list[Finding]:
     """Every spreadsheet finding in one workbook.
 
@@ -259,5 +338,9 @@ def detect(record: SheetRecord) -> list[Finding]:
     questions, and `CLAUDE.md` forbids ranking one against the other.
     """
     return (
-        hidden_sheets(record) + hidden_rows(record) + hidden_columns(record) + filtered_rows(record)
+        hidden_sheets(record)
+        + hidden_rows(record)
+        + hidden_columns(record)
+        + filtered_rows(record)
+        + changed_cells(record)
     )

@@ -30,7 +30,7 @@ from ..metadata import read_ooxml
 from ..metadata.detectors import describe
 from ..odf.sheets import read_sheets as read_odf_sheets
 from ..ooxml.sheets import read_sheets as read_ooxml_sheets
-from ..revisions import RevisionRecord
+from ..revisions import Revision, RevisionRecord
 from ..sheets import SheetRecord
 from .model import Extraction, TextUnit, UnreadableFile
 
@@ -89,7 +89,39 @@ def _assemble(record: SheetRecord, comments, metadata) -> Extraction:
         if text.strip():
             units.append(TextUnit(text=text))
 
-    revisions = RevisionRecord(comments=tuple(comments))
+    # Change tracking goes into the shared revision record as well as staying
+    # on the sheet record, and the split is deliberate. The sheet record has
+    # the cell address and the current value, which is what `changed-cell`
+    # reports. The revision record answers the *other* question - who worked on
+    # this file and when - which is one fact about the document rather than one
+    # fact per change, and is already implemented once.
+    #
+    # `cell-change` is not one of the kinds `deleted_text` treats as hiding, so
+    # no change is reported twice; a tracked deletion carries no content in
+    # either family, so it quotes nothing and is counted rather than reported.
+    revisions = RevisionRecord(
+        revisions=tuple(
+            Revision(
+                kind="cell-change",
+                text=change.previous,
+                author=change.author,
+                date=change.date,
+                part=change.sheet,
+            )
+            for change in record.changes
+        )
+        + tuple(
+            Revision(
+                kind="deletion",
+                text="",
+                author=deletion.author,
+                date=deletion.date,
+                part=deletion.sheet,
+            )
+            for deletion in record.deletions
+        ),
+        comments=tuple(comments),
+    )
 
     if metadata is not None:
         remarks.extend(metadata.remarks)
