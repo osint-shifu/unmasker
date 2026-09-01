@@ -39,6 +39,8 @@ which RFC 2606 reserves for the purpose.
 | [`ods/libreoffice-calc-filtered-rows.ods`](ods/libreoffice-calc-filtered-rows.md) | LibreOffice 24.2 Calc | two open cases | two more the filter is holding back |
 | [`ods/libreoffice-calc-tracked-changes.ods`](ods/libreoffice-calc-tracked-changes.md) | LibreOffice 24.2 Calc | a bid of 198 000 | the 240 000 it replaced, and who edited it |
 | [`xlsx/libreoffice-calc-tracked-changes.xlsx`](xlsx/libreoffice-calc-tracked-changes.md) | LibreOffice 24.2 Calc | the same bid | the same three changes, in a revision log of three parts |
+| [`xlsx/libreoffice-calc-formatted-values.xlsx`](xlsx/libreoffice-calc-formatted-values.md) | LibreOffice 24.2 Calc | a timetable with a row missing | a hidden date stored as `45366` and a reserve stored as `240000` |
+| [`ods/libreoffice-calc-formatted-values.ods`](ods/libreoffice-calc-formatted-values.md) | LibreOffice 24.2 Calc | the same timetable | the same row, with the displayed text kept in the cell |
 
 Every specimen that hides text *on the page* is also found by `--ocr`, which
 renders the page and reads the picture back and knows none of the mechanisms —
@@ -119,6 +121,10 @@ Named here so their absence is not mistaken for coverage:
 - **An `autoFilter` element**, which records what a filter was set to.
   LibreOffice's ODS writes none, and its .xlsx export drops the filter/hidden
   distinction altogether.
+- **A 1904-epoch workbook**, a built-in `numFmtId` used without its format
+  code, a time of day, and a conditional or coloured number format. Excel
+  writes the first two routinely; LibreOffice defines every format explicitly
+  and exports `date1904="false"`, so all four are covered only synthetically.
 - **A tracked deletion that kept its cells.** Both formats allow the removed
   content to be stored with the deletion; neither producer here writes any, so
   a deletion always quotes nothing and the other path is untested.

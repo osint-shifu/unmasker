@@ -45,6 +45,7 @@ library.
 
 from __future__ import annotations
 
+import datetime
 import posixpath
 import zipfile
 from xml.etree import ElementTree
@@ -111,23 +112,155 @@ def _shared_strings(archive: zipfile.ZipFile) -> list[str]:
     return ["".join(t.text or "" for t in item.iter(f"{MAIN}t")) for item in root.iter(f"{MAIN}si")]
 
 
-def _cell_text(cell, shared: list[str]) -> str:
+# The number formats SpreadsheetML does not write down, because every reader is
+# expected to know them. Only the ones that mean a date or a time are listed:
+# the rest are quoted as stored, so their codes are never needed.
+BUILT_IN_DATES = frozenset({14, 15, 16, 17, 18, 19, 20, 21, 22, 45, 46, 47})
+
+# Days from the epoch both producers count from. Serial 1 is 1899-12-31.
+EPOCH = datetime.date(1899, 12, 30)
+EPOCH_1904 = datetime.date(1904, 1, 1)
+
+
+def _unquoted(code: str) -> str:
+    """A format code with its literal text taken out.
+
+    `#,###.00" zl"` has an `m` nowhere, but `0.00"m"` has one inside a literal
+    and `yyyy\\-mm\\-dd` has two escaped hyphens that are not tokens either.
+    Testing the raw string for a `d` reports a currency suffix as a date.
+    """
+    out, quoted, skip = [], False, False
+    for character in code:
+        if skip:
+            skip = False
+            continue
+        if character == "\\":
+            skip = True
+        elif character == '"':
+            quoted = not quoted
+        elif not quoted:
+            out.append(character)
+    return "".join(out)
+
+
+def _is_date_format(identifier: int, code: str) -> bool:
+    if identifier in BUILT_IN_DATES:
+        return True
+    bare = _unquoted(code)
+    # `[h]` and `AM/PM` are time; `y` and `d` are date. `m` alone is ambiguous
+    # between month and minute, so it counts only beside one of the others.
+    return any(token in bare.lower() for token in ("y", "d", "h", "s"))
+
+
+def _number_formats(archive: zipfile.ZipFile) -> list[tuple[int, str]]:
+    """`s="2"` -> the format that cell is shown in, by position in `cellXfs`.
+
+    Two indirections, and taking either for the other reads the wrong format:
+    `s` indexes `cellXfs`, whose entries name a `numFmtId`, which is either
+    built in or defined in `numFmts`. `cellStyleXfs` sits in the same file and
+    looks identical, so the block has to be found rather than the elements
+    swept up.
+    """
+    part = "xl/styles.xml"
+    if part not in archive.namelist():
+        return []
+    try:
+        root = ElementTree.fromstring(archive.read(part))
+    except ElementTree.ParseError:
+        return []
+
+    codes: dict[int, str] = {}
+    for entry in root.iter(f"{MAIN}numFmt"):
+        try:
+            codes[int(entry.get("numFmtId", "-1"))] = entry.get("formatCode") or ""
+        except ValueError:
+            continue
+
+    out: list[tuple[int, str]] = []
+    for block in root.iter(f"{MAIN}cellXfs"):
+        for entry in block.iter(f"{MAIN}xf"):
+            try:
+                identifier = int(entry.get("numFmtId", "0"))
+            except ValueError:
+                identifier = 0
+            out.append((identifier, codes.get(identifier, "")))
+    return out
+
+
+def _as_date(serial: str, code: str, epoch: datetime.date) -> str | None:
+    """A serial number rendered as the date it stands for, or None.
+
+    Exact, which is why this is the one format worth rendering: a date cell
+    holds a count of days and nothing else, so there is no rounding and no
+    locale to get wrong. A hidden column of dates reads as `45366 | 45397`
+    without it, which is the file's arithmetic rather than the document's
+    content.
+    """
+    try:
+        days = float(serial)
+    except ValueError:
+        return None
+    try:
+        moment = epoch + datetime.timedelta(days=days)
+    except (OverflowError, ValueError):
+        return None
+    if isinstance(moment, datetime.datetime):  # pragma: no cover - timedelta returns date
+        moment = moment.date()
+
+    fraction = days - int(days)
+    bare = _unquoted(code).lower()
+    if fraction and ("h" in bare or "s" in bare):
+        seconds = int(round(fraction * 86400))
+        return f"{moment.isoformat()} {seconds // 3600:02d}:{seconds // 60 % 60:02d}"
+    return moment.isoformat()
+
+
+def _cell_text(cell, shared: list[str], formats=(), epoch=EPOCH) -> tuple[str, str]:
+    """The cell's text, and the format code the sheet shows it in.
+
+    The second half is why this returns a pair. A number is stored one way and
+    shown another - `45366` is a date, `240000` is `240 000,00 zl` - and a
+    report that quotes the stored value without saying so has told its reader
+    something they cannot match against the document in front of them.
+    """
     kind = cell.get("t")
     if kind == "s":
         value = cell.find(f"{MAIN}v")
         try:
-            return shared[int((value.text or "").strip())] if value is not None else ""
+            return (shared[int((value.text or "").strip())] if value is not None else ""), ""
         except (ValueError, IndexError):
-            return ""
+            return "", ""
     if kind == "inlineStr":
         node = cell.find(f"{MAIN}is")
-        return "".join(t.text or "" for t in node.iter(f"{MAIN}t")) if node is not None else ""
+        text = "".join(t.text or "" for t in node.iter(f"{MAIN}t")) if node is not None else ""
+        return text, ""
+
     value = cell.find(f"{MAIN}v")
-    return (value.text or "") if value is not None else ""
+    text = (value.text or "") if value is not None else ""
+    if not text:
+        return "", ""
+
+    try:
+        identifier, code = formats[int(cell.get("s", "0"))]
+    except (ValueError, IndexError):
+        return text, ""
+
+    if _is_date_format(identifier, code):
+        rendered = _as_date(text, code, epoch)
+        # A rendered date needs no note: it *is* what the sheet shows.
+        return (rendered, "") if rendered else (text, code)
+    # Anything else keeps its stored number. Rendering `#,###.00" zl"` means
+    # writing a number formatter, and one that is nearly right quotes a figure
+    # that is nearly right - worse in a forensic report than an exact
+    # quotation of what the file holds, said plainly.
+    return text, ("" if code in ("", "General") else code)
 
 
-def _read_worksheet(xml: bytes, name: str, hidden: str | None, shared: list[str]) -> Sheet:
+def _read_worksheet(
+    xml: bytes, name: str, hidden: str | None, shared: list[str], formats=(), epoch=EPOCH
+) -> tuple[Sheet, set[str]]:
     root = ElementTree.fromstring(xml)
+    applied: set[str] = set()
 
     hidden_columns: set[int] = set()
     for column in root.iter(f"{MAIN}col"):
@@ -152,16 +285,21 @@ def _read_worksheet(xml: bytes, name: str, hidden: str | None, shared: list[str]
             hidden_rows.add(number)
         for position, cell in enumerate(row.iter(f"{MAIN}c"), start=1):
             column = _column_of(cell.get("r") or "") or position
-            text = _cell_text(cell, shared)
+            text, code = _cell_text(cell, shared, formats, epoch)
+            if code:
+                applied.add(code)
             if text:
                 cells.append(Cell(row=number, column=column, text=text))
 
-    return Sheet(
-        name=name,
-        hidden=hidden,
-        cells=tuple(cells),
-        hidden_rows=frozenset(hidden_rows),
-        hidden_columns=frozenset(hidden_columns),
+    return (
+        Sheet(
+            name=name,
+            hidden=hidden,
+            cells=tuple(cells),
+            hidden_rows=frozenset(hidden_rows),
+            hidden_columns=frozenset(hidden_columns),
+        ),
+        applied,
     )
 
 
@@ -295,6 +433,14 @@ def read_sheets(archive: zipfile.ZipFile) -> tuple[SheetRecord, tuple[Comment, .
 
     targets = _relationships(archive, WORKBOOK)
     shared = _shared_strings(archive)
+    formats = _number_formats(archive)
+    # A workbook can count its days from 1904 instead, and a reader that
+    # ignored it would report every date four years and a day early.
+    epoch = EPOCH
+    for properties in book.iter(f"{MAIN}workbookPr"):
+        if _is_true(properties.get("date1904")):
+            epoch = EPOCH_1904
+    applied: set[str] = set()
 
     sheets: list[Sheet] = []
     comments: list[Comment] = []
@@ -317,7 +463,9 @@ def read_sheets(archive: zipfile.ZipFile) -> tuple[SheetRecord, tuple[Comment, .
             sheets.append(Sheet(name=name, hidden=hidden))
             continue
         try:
-            sheets.append(_read_worksheet(archive.read(part), name, hidden, shared))
+            sheet, codes = _read_worksheet(archive.read(part), name, hidden, shared, formats, epoch)
+            sheets.append(sheet)
+            applied.update(codes)
         except ElementTree.ParseError as exc:
             remarks.append(f'sheet "{name}" is not well-formed XML and was skipped: {exc}')
             sheets.append(Sheet(name=name, hidden=hidden))
@@ -326,6 +474,16 @@ def read_sheets(archive: zipfile.ZipFile) -> tuple[SheetRecord, tuple[Comment, .
 
     changes, deletions, log_remarks = _read_revision_log(archive, sheet_of)
     remarks.extend(log_remarks)
+
+    if applied:
+        # "Nothing found" has two meanings and so does a quoted value that does
+        # not match what a reader saw. A date is rendered and needs no note; a
+        # currency or a percentage keeps the number the file holds, and the
+        # note says so and names what the sheet does to it.
+        remarks.append(
+            "some values are quoted as stored: the sheet shows them through the "
+            "number format " + ", ".join(sorted(applied))
+        )
 
     return (
         SheetRecord(

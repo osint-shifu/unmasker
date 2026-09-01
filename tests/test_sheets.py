@@ -569,3 +569,191 @@ def test_a_row_that_is_both_hidden_and_filtered_is_reported_once_as_hidden():
         filtered_rows=frozenset({3}),
     )
     assert [f.detector for f in detect(record)] == ["hidden-rows"]
+
+
+# --------------------------------------------------------------------------
+# a stored value is not always the value on the screen
+#
+# ODF keeps the formatted text in the cell's paragraph, so the two agree there
+# and the reader needs to do nothing. SpreadsheetML keeps only the number and a
+# style index, so a hidden column of dates reads as `45366 | 45397` unless the
+# number format is resolved - which is a quotation the person who hid it would
+# not recognise, and worse than useless in a report.
+# --------------------------------------------------------------------------
+
+FORMATTED = SPECIMENS / "xlsx" / "libreoffice-calc-formatted-values.xlsx"
+FORMATTED_ODS = SPECIMENS / "ods" / "libreoffice-calc-formatted-values.ods"
+
+FORMATS = pytest.mark.parametrize("specimen", [FORMATTED, FORMATTED_ODS], ids=["xlsx", "ods"])
+
+
+@FORMATS
+def test_a_hidden_date_is_reported_as_a_date(specimen):
+    """Stored as 45366, shown as a date, and both families must say the date.
+    A serial number is the file's arithmetic, not the document's content."""
+    (found,) = by_detector(specimen, "hidden-rows")
+    assert "2024-03-15" in found.machine_reads
+    assert "45366" not in found.machine_reads
+
+
+def test_a_hidden_currency_value_keeps_the_number_the_xlsx_stores():
+    """The other half of the same decision. Rendering `#,###.00" zl"` means
+    writing a number formatter, and one that is nearly right would quote a
+    figure that is nearly right - so the stored number is quoted, which is
+    exact, and the format is named in a note."""
+    (found,) = by_detector(FORMATTED, "hidden-rows")
+    assert "240000" in found.machine_reads
+
+
+def test_the_ods_quotes_the_currency_the_way_the_sheet_shows_it():
+    """Not an inconsistency between the readers: an inconsistency between the
+    formats, reported faithfully. ODF keeps the formatted text in the cell, so
+    there is a displayed value to quote and the tool quotes it. OOXML keeps
+    only the number, so there is not.
+
+    The tool says what each file says. Making the .ods quote `240000` to match
+    the .xlsx would be throwing away evidence one of them actually carries.
+    """
+    (found,) = by_detector(FORMATTED_ODS, "hidden-rows")
+    assert "240" in found.machine_reads and "00,00 zl" in found.machine_reads
+    assert "240000" not in found.machine_reads
+
+
+def test_the_note_names_the_format_the_sheet_applies():
+    """`CLAUDE.md`: nothing found has two meanings, and so does a value that
+    does not match what a reader saw. The note says the quotation is the stored
+    value and what the sheet does to it."""
+    remarks = read(FORMATTED).remarks
+    assert any("zl" in remark and "as stored" in remark for remark in remarks)
+
+
+def test_a_general_cell_produces_no_note():
+    """A note on every workbook is a note nobody reads."""
+    assert not [r for r in read(XLSX).remarks if "as stored" in r]
+
+
+def test_a_date_needs_no_note_because_it_was_rendered():
+    remarks = read(FORMATTED).remarks
+    assert not any("yyyy" in remark for remark in remarks)
+
+
+def test_the_two_families_agree_about_the_hidden_date():
+    """One source document. The .ods carries the formatted text and the .xlsx
+    carries a serial number, and a reader that got the second wrong would
+    disagree with the first about what the file says."""
+    xlsx = by_detector(FORMATTED, "hidden-rows")[0].machine_reads
+    ods = by_detector(FORMATTED_ODS, "hidden-rows")[0].machine_reads
+    assert "2024-03-15" in xlsx and "2024-03-15" in ods
+
+
+# --------------------------------------------------------------------------
+# number formats no producer on this machine writes
+#
+# LibreOffice defines every format explicitly, exports `date1904="false"`, and
+# was not asked for a time of day. Each of these is the behaviour the specimen
+# notes name as missing, held by a test rather than by nothing.
+# --------------------------------------------------------------------------
+
+from unmasker.ooxml.sheets import EPOCH as EPOCH_DEFAULT  # noqa: E402
+from unmasker.ooxml.sheets import _as_date, _is_date_format  # noqa: E402
+
+
+def dated(sheet_xml: str, styles: str, workbook_pr: str = "") -> zipfile.ZipFile:
+    return archive(
+        **{
+            "xl__workbook_x_xml": (
+                '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"'
+                ' xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+                + workbook_pr
+                + '<sheets><sheet name="S" sheetId="1" r:id="rId1"/></sheets></workbook>'
+            ),
+            "xl___rels__workbook_x_xml_x_rels": (
+                '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+                '<Relationship Id="rId1" Target="worksheets/sheet1.xml"/></Relationships>'
+            ),
+            "xl__worksheets__sheet1_x_xml": (
+                '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+                + sheet_xml
+                + "</worksheet>"
+            ),
+            "xl__styles_x_xml": (
+                '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+                + styles
+                + "</styleSheet>"
+            ),
+        }
+    )
+
+
+HIDDEN_NUMBER = (
+    '<sheetData><row r="1" hidden="true">'
+    '<c r="A1" s="0"><v>{}</v></c></row></sheetData>'
+)
+
+
+def test_a_built_in_date_format_is_recognised_without_a_format_code():
+    """`numFmtId` 14 to 22 and 45 to 47 are dates, and the file does not write
+    their codes down because every reader is expected to know them. Excel
+    routinely uses them; LibreOffice defines its own instead, so nothing here
+    produces one."""
+    record, _ = read_ooxml_sheets(
+        dated(
+            HIDDEN_NUMBER.format("45366"),
+            '<cellXfs><xf numFmtId="14"/></cellXfs>',
+        )
+    )
+    (found,) = detect(record)
+    assert found.machine_reads == "2024-03-15"
+
+
+def test_a_date_letter_inside_a_quoted_literal_is_not_a_date():
+    """`0.00" days"` is a number with a unit after it, and the unit is spelled
+    with the letters of a date. Testing the raw format code calls it a date and
+    renders the number as one - a quotation that is not merely imprecise but a
+    different kind of thing.
+
+    The literal has to contain a *real* token to discriminate. An earlier
+    version of this test used `0.00"m"`, which passes whether or not the
+    quoting is honoured, because `m` alone is ambiguous between month and
+    minute and is deliberately not a token on its own. Mutation testing caught
+    it passing for the wrong reason.
+    """
+    assert not _is_date_format(0, '0.00" days"')
+    assert not _is_date_format(0, '#,##0" hours"')
+    assert not _is_date_format(0, "0.00\\d")
+    assert _is_date_format(0, "yyyy\\-mm\\-dd")
+
+
+def test_a_workbook_that_counts_from_1904_is_read_that_way():
+    """A four-year-and-a-day error, silent, on every date in the file."""
+    record, _ = read_ooxml_sheets(
+        dated(
+            HIDDEN_NUMBER.format("43904"),
+            '<cellXfs><xf numFmtId="14"/></cellXfs>',
+            workbook_pr='<workbookPr date1904="true"/>',
+        )
+    )
+    (found,) = detect(record)
+    assert found.machine_reads == "2024-03-15"
+
+
+def test_the_same_serial_without_the_1904_flag_is_a_different_day():
+    """The other half: the flag has to change the answer, or reading it proves
+    nothing."""
+    record, _ = read_ooxml_sheets(
+        dated(HIDDEN_NUMBER.format("43904"), '<cellXfs><xf numFmtId="14"/></cellXfs>')
+    )
+    (found,) = detect(record)
+    assert found.machine_reads == "2020-03-14"
+
+
+def test_a_time_of_day_is_rendered_beside_the_date():
+    """A serial's fractional part is the time. It is only shown where the
+    format asks for one - a date-only format on a value with a fraction is a
+    cell whose time the sheet does not display."""
+    assert _as_date("45366.5", "yyyy-mm-dd hh:mm", EPOCH_DEFAULT) == "2024-03-15 12:00"
+    assert _as_date("45366.5", "yyyy-mm-dd", EPOCH_DEFAULT) == "2024-03-15"
+
+
+def test_a_value_that_is_not_a_number_is_not_forced_into_a_date():
+    assert _as_date("not a serial", "yyyy-mm-dd", EPOCH_DEFAULT) is None

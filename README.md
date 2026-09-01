@@ -114,6 +114,13 @@ numbers are gone.
 | `filtered-rows` | rows a filter is holding back rather than a person having hidden them — a weaker claim, and reported as one |
 | `changed-cell` | what change tracking took out of a cell and left in the file, with who changed it and when — the one finding here whose **both** columns carry text, because the current value is sitting in the cell |
 
+A spreadsheet stores a date as `45366` and a price as `240000`. Dates are
+rendered, because a date cell holds a count of days and the conversion is
+exact. Everything else is quoted as the file stores it, with a note naming the
+format the sheet applies — a number formatter that is nearly right quotes a
+figure that is nearly right, which is worse than an exact quotation and a
+sentence of context.
+
 ### In the container
 
 | | |
