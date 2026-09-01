@@ -258,3 +258,122 @@ def test_they_agree_on_the_controls_too():
         page, (words, _) = read_back(name)
         assert [f for f in detect(page) if f.detector == "covered-text"] == [], name
         assert unrendered_text(page, words) == [], name
+
+
+# --------------------------------------------------------------------------
+# words, and why they have to be counted across show-operations
+#
+# The OCR detectors compare the file's words against the picture's words, and
+# `UNREAD_RUN` is a threshold in *words* - measured on the specimens as the
+# line between the control's longest unread run and every file that hides
+# something. That measurement means nothing if a "word" is sometimes a letter.
+#
+# Chrome writes one glyph per `Tj`. Grouping words inside each run turned this
+# page's 62 words into 353, one per glyph, so five consecutive unread words
+# became five consecutive unread letters - a far lower bar than the one that
+# was measured.
+#
+# The expected counts are poppler's, not this project's: `pdftotext FILE - |
+# wc -w`. Measuring the code under test against itself would prove nothing.
+# --------------------------------------------------------------------------
+
+POPPLER_WORDS = {
+    "chrome-print-css-overlay.pdf": 62,
+    "chrome-transparent-text.pdf": 56,
+    "redacted-scan-with-ocr.pdf": 16,
+    "libreoffice-writer-black-bars.pdf": 62,
+}
+
+
+@pytest.mark.parametrize("name,expected", sorted(POPPLER_WORDS.items()))
+def test_the_word_count_agrees_with_poppler(name, expected):
+    from unmasker.pdf.detectors import _words_of
+
+    page = interpret_page(page_of(name))
+    assert len(_words_of(page, painted_only=False)) == expected
+
+
+def test_a_producer_that_writes_one_glyph_per_operation_still_yields_words():
+    """The specific failure. Without grouping across runs this page's first
+    'words' are S, Y, N, T, H, E, T, I."""
+    from unmasker.pdf.detectors import _words_of
+
+    page = interpret_page(page_of("chrome-print-css-overlay.pdf"))
+    words = ["".join(g.char for g in w) for w in _words_of(page, painted_only=False)]
+    assert "SYNTHETIC" in words
+
+
+def test_a_gap_wide_enough_to_be_a_space_breaks_a_word():
+    """`WORD_GAP` is chosen, not measured, and this is the only thing holding
+    it: every producer on this machine writes space characters, so the
+    whitespace rule fires first and no specimen reaches the geometry.
+
+    A generator that positions each word with `Td` and writes no spaces is a
+    real thing, and without this it would produce one word per line.
+    """
+    from unmasker.pdf.detectors import _words_of
+    from unmasker.pdf.geometry import BLACK, Rect
+    from unmasker.pdf.interpreter import Glyph, InterpretedPage, TextRun
+
+    def spaced(text: str, x: float, size: float = 10.0) -> TextRun:
+        gs = tuple(
+            Glyph(
+                char=ch,
+                code=ord(ch),
+                bbox=Rect(x + i * 6, 100, x + i * 6 + 6, 110),
+                origin=(x + i * 6, 100),
+            )
+            for i, ch in enumerate(text)
+        )
+        return TextRun(
+            text=text,
+            glyphs=gs,
+            bbox=Rect(gs[0].bbox.x0, 100, gs[-1].bbox.x1, 110),
+            font="F1",
+            size=size,
+            fill=BLACK,
+        )
+
+    # 'one' ends at x=68; 'two' starts at 90, a gap of 22 against a size of 10.
+    page = InterpretedPage(
+        number=1,
+        box=Rect(0, 0, 595, 842),
+        texts=(spaced("one", 50), spaced("two", 90)),
+        shapes=(),
+    )
+    words = ["".join(g.char for g in w) for w in _words_of(page)]
+    assert words == ["one", "two"]
+
+    # Butted up against each other, with no space character, they are one word.
+    page = InterpretedPage(
+        number=1,
+        box=Rect(0, 0, 595, 842),
+        texts=(spaced("one", 50), spaced("two", 68)),
+        shapes=(),
+    )
+    words = ["".join(g.char for g in w) for w in _words_of(page)]
+    assert words == ["onetwo"]
+
+
+def test_painted_only_decides_which_question_is_being_asked():
+    """The two OCR detectors ask opposite questions and need different word
+    lists, and nothing held that apart until mutation testing asked.
+
+    `redacted-scan-with-ocr.pdf` is a picture with an invisible OCR layer
+    beneath it. For *is this in the file and not on the page*, none of that
+    layer counts - a render mode that never paints is legitimately absent from
+    the picture, and `invisible_text` has already reported it. For *is this on
+    the page and not in the file*, all sixteen words count: the layer is still
+    text in the file and `pdftotext` reads it straight out.
+    """
+    from unmasker.pdf.detectors import _words_of
+
+    scan = interpret_page(page_of("redacted-scan-with-ocr.pdf"))
+    assert len(_words_of(scan, painted_only=True)) == 0
+    assert len(_words_of(scan, painted_only=False)) == 16
+
+    # The same split where only *some* of the page is unpainted: Chrome's
+    # transparent paragraphs are in the file and not on the picture.
+    chrome = interpret_page(page_of("chrome-transparent-text.pdf"))
+    assert len(_words_of(chrome, painted_only=True)) == 42
+    assert len(_words_of(chrome, painted_only=False)) == 56

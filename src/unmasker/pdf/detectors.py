@@ -398,8 +398,21 @@ def _normalise(text: str) -> str:
     return "".join(c for c in text.lower() if c.isalnum())
 
 
+# How large a gap between two glyphs on a line ends a word, as a fraction of
+# the font size. A typeset space is about a quarter of an em and letter-spacing
+# is near zero, so anything in between separates them.
+#
+# Unlike `UNREAD_RUN`, this is **chosen and not measured**: no specimen here
+# exercises it, because every producer on this machine emits space characters
+# and the whitespace rule fires first. It is defence against one that does not
+# - some generators position each word with `Td` and write no spaces at all -
+# and `test_a_gap_wide_enough_to_be_a_space_breaks_a_word` is the only thing
+# that holds it.
+WORD_GAP = 0.20
+
+
 def _words_of(page: InterpretedPage, painted_only: bool = True) -> list[list[Glyph]]:
-    """Glyphs grouped into whitespace-delimited words.
+    """Glyphs grouped into words, across show-operations and along the line.
 
     `painted_only` decides which question is being asked. For *is this in the
     file and not on the page*, only painted text counts - text a render mode
@@ -407,18 +420,43 @@ def _words_of(page: InterpretedPage, painted_only: bool = True) -> list[list[Gly
     has already said so. For *is this on the page and not in the file*, every
     run counts, painted or not: an invisible OCR layer is still text in the
     file, and `pdftotext` reads it straight out.
+
+    **Words are counted across runs, and the reason is a threshold.** The OCR
+    detectors report a run of consecutive unread *words*, and `UNREAD_RUN` was
+    measured against the specimens as the line between the control and every
+    file that hides something. That measurement means nothing if a word is
+    sometimes a letter - and Chrome writes one glyph per `Tj`, so grouping
+    inside each run turned one page's 62 words into 353. Five unread words
+    became five unread letters, a far lower bar than the one measured.
+
+    The fifth place this project has found the same rule broken, after
+    `covered_text`, `invisible_text`, `low_contrast_text` and `off_page_text`.
+
+    Poppler settles the count, not this code: `pdftotext FILE - | wc -w` on
+    four specimens, asserted in `tests/test_ocr.py`.
     """
+
+    def wanted(run: TextRun) -> bool:
+        return not painted_only or (run.render_mode in PAINTING_MODES and not run.is_invisible)
+
     out: list[list[Glyph]] = []
-    for run in page.texts:
-        if painted_only and (run.render_mode not in PAINTING_MODES or run.is_invisible):
-            continue
+    for line in _lines(page, include=wanted):
         current: list[Glyph] = []
-        for glyph in run.glyphs:
-            if glyph.char.strip():
-                current.append(glyph)
-            elif current:
+        end: float | None = None
+        for glyph, run in line:
+            dx, dy = run.direction
+            start = glyph.origin[0] * dx + glyph.origin[1] * dy
+            extent = abs(glyph.bbox.width * dx) + abs(glyph.bbox.height * dy)
+
+            breaks = not glyph.char.strip() or (
+                end is not None and start - end > WORD_GAP * run.size
+            )
+            if breaks and current:
                 out.append(current)
                 current = []
+            if glyph.char.strip():
+                current.append(glyph)
+            end = start + extent
         if current:
             out.append(current)
     return out
