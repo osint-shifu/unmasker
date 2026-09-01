@@ -757,14 +757,33 @@ def off_page_text(page: InterpretedPage) -> list[Finding]:
     A glyph counts only when it has *no* overlap at all with the visible area.
     Half a word past a margin is a layout accident, and reporting those would
     make the detector fire on most of the documents it is ever pointed at.
+
+    ## A cell boundary and a redaction are the same mechanism
+
+    Text is drawn, a clip is in force, part of the text falls outside it. One
+    of those is a column too narrow for what was typed into it; the other is a
+    hidden sentence. Nothing in the file distinguishes them, and a spreadsheet
+    exported to PDF can produce a screenful of the first - after which a reader
+    scrolls past the second.
+
+    What can be said is what **the rest of the line** supports. Clipped text
+    with visible text beside it on the same line is what an overflow looks
+    like; a line clipped away entirely is not. So the first is
+    `CIRCUMSTANTIAL` and says so in its summary.
+
+    It is not suppressed, and that is the point of using the evidence class
+    rather than a filter: a redaction that clips only the second half of a line
+    looks exactly like an overflow, and a tool that deleted the finding would
+    have decided for its reader.
     """
     findings: list[Finding] = []
-    for run in page.texts:
-        if not run.text.strip():
-            continue
-        visible = page.box.intersect(run.clip) if run.clip else page.box
-        glyphs = list(run.glyphs)
-        flags = [not g.bbox.overlaps(visible) for g in glyphs]
+    for line in _lines(page, include=lambda run: bool(run.text.strip())):
+        glyphs = [glyph for glyph, _ in line]
+        areas = [page.box.intersect(run.clip) if run.clip else page.box for _, run in line]
+        flags = [
+            not glyph.bbox.overlaps(area) for glyph, area in zip(glyphs, areas, strict=True)
+        ]
+        remainder = "".join(g.char for g, flag in zip(glyphs, flags, strict=True) if not flag)
 
         for start, stop in _spans(glyphs, flags):
             text = "".join(g.char for g in glyphs[start:stop])
@@ -774,15 +793,22 @@ def off_page_text(page: InterpretedPage) -> list[Finding]:
                 [(g.bbox.x0, g.bbox.y0) for g in glyphs[start:stop]]
                 + [(g.bbox.x1, g.bbox.y1) for g in glyphs[start:stop]]
             )
+            visible = areas[start]
             findings.append(
                 Finding(
                     detector="off-page-text",
-                    basis=Basis.DIRECT,
+                    basis=Basis.CIRCUMSTANTIAL if remainder.strip() else Basis.DIRECT,
                     summary=(
                         f"{_count(text)} at x {box.x0:.1f}-{box.x1:.1f}, "
                         f"y {box.y0:.1f}-{box.y1:.1f}, entirely outside the visible "
                         f"area x {visible.x0:.1f}-{visible.x1:.1f}, "
                         f"y {visible.y0:.1f}-{visible.y1:.1f}"
+                        + (
+                            "; the rest of the line is on the page, so this may be "
+                            f"text overflowing its box - {_readable(remainder)!r}"
+                            if remainder.strip()
+                            else ""
+                        )
                     ),
                     human_sees="",
                     machine_reads=text,

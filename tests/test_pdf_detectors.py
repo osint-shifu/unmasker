@@ -1036,3 +1036,52 @@ def test_a_rotated_line_and_a_horizontal_one_never_merge():
     )
     reported = {f.machine_reads for f in low_contrast_text(page)}
     assert reported == {"flat", "DOWN"}
+
+
+# --------------------------------------------------------------------------
+# a cell boundary and a redaction by clipping
+#
+# The same mechanism, used for two purposes: text is drawn, a clipping path is
+# in force, part of the text falls outside it. One is a column too narrow; the
+# other is a hidden sentence, and the file says nothing about which.
+#
+# What can be said is what the rest of the line supports. A clipped tail beside
+# visible text on the same line is what an overflow looks like; a line clipped
+# away entirely is not. That is a weaker claim, so it is reported as
+# circumstantial rather than suppressed - a redaction that clips only the
+# second half of a line looks exactly like an overflow too, and deleting the
+# finding would be deciding for the reader.
+# --------------------------------------------------------------------------
+
+OVERFLOW = "libreoffice-calc-clipped-overflow.pdf"
+CROPPED = "libreoffice-writer-hidden-in-plain-sight.pdf"
+
+
+def test_a_clipped_tail_beside_visible_text_is_circumstantial():
+    found = off_page_text(interpret_page(page_of(OVERFLOW)))
+    assert found, "the specimen no longer clips anything"
+    assert all(f.basis is Basis.CIRCUMSTANTIAL for f in found)
+
+
+def test_the_clipped_tail_says_the_rest_of_the_line_is_on_the_page():
+    """A reader has to be able to tell this apart from the other kind without
+    opening the file, so the summary says which of the two the evidence
+    supports rather than leaving both findings identically worded."""
+    found = off_page_text(interpret_page(page_of(OVERFLOW)))
+    assert all("rest of the line" in f.summary for f in found)
+
+
+def test_a_line_clipped_away_entirely_stays_direct():
+    """The control. Nothing of this line is on the page, so there is no
+    overflow reading available and the finding keeps its strength."""
+    (found,) = off_page_text(interpret_page(page_of(CROPPED)))
+    assert found.basis is Basis.DIRECT
+    assert "rest of the line" not in found.summary
+
+
+def test_the_overflowing_line_is_still_reported_at_all():
+    """Not suppressed. A redaction that clips the second half of a line looks
+    exactly like this, and a tool that deleted the finding would have decided
+    for its reader."""
+    found = off_page_text(interpret_page(page_of(OVERFLOW)))
+    assert "".join(sorted(f.machine_reads for f in found))

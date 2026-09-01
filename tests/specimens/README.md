@@ -42,6 +42,7 @@ which RFC 2606 reserves for the purpose.
 | [`xlsx/libreoffice-calc-formatted-values.xlsx`](xlsx/libreoffice-calc-formatted-values.md) | LibreOffice 24.2 Calc | a timetable with a row missing | a hidden date stored as `45366` and a reserve stored as `240000` |
 | [`ods/libreoffice-calc-formatted-values.ods`](ods/libreoffice-calc-formatted-values.md) | LibreOffice 24.2 Calc | the same timetable | the same row, with the displayed text kept in the cell |
 | [`pdf/libreoffice-calc-rotated-headers.pdf`](pdf/libreoffice-calc-rotated-headers.md) | LibreOffice 24.2 Calc | two rotated headers and a column that looks empty | a third header, sideways, white on the paper |
+| [`pdf/libreoffice-calc-clipped-overflow.pdf`](pdf/libreoffice-calc-clipped-overflow.md) | LibreOffice 24.2 Calc | two case notes that stop mid-word | the rest of each, clipped by a column boundary — and **nothing hidden** |
 
 Every specimen that hides text *on the page* is also found by `--ocr`, which
 renders the page and reads the picture back and knows none of the mechanisms —
@@ -114,8 +115,13 @@ Named here so their absence is not mistaken for coverage:
   stream, and a `/Square` written by hand renders in nothing without an `/AP`,
   which is precisely why the appearance stream is the part that matters. The
   tool notes such an annotation rather than passing over it.
-- **Redaction by clipping path.** Handled by `off-page-text` and covered only
-  by a unit test; no producer here emits it.
+- **A redaction that clips the second half of a line**, which is the hard
+  case: evidence identical to `libreoffice-calc-clipped-overflow.pdf` and the
+  opposite meaning. No producer here writes one, and the tool reports it
+  exactly as it reports that file — which is correct, and is why the finding
+  is weakened rather than filtered.
+- **A clip that is not a rectangle**, and text clipped by a form XObject's
+  `/BBox` rather than by a `W n` path.
 - **A raster page with an invisible OCR text layer underneath**, which is a
   failed redaction that `flattened-to-image.pdf` does not represent.
 - **A sheet marked `veryHidden`**, which the spreadsheet's own interface offers
