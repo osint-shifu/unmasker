@@ -1085,3 +1085,74 @@ def test_the_overflowing_line_is_still_reported_at_all():
     for its reader."""
     found = off_page_text(interpret_page(page_of(OVERFLOW)))
     assert "".join(sorted(f.machine_reads for f in found))
+
+
+# --------------------------------------------------------------------------
+# the rule that has broken five times
+#
+# covered_text (Chrome, one glyph per Tj), invisible_text (tesseract, one
+# operation per word), low_contrast_text and off_page_text (the rotated
+# headers), _words_of (Chrome again, under a threshold measured in words).
+#
+# Every one was found by a producer doing something the previous fix had not
+# anticipated, which means the sixth will be too. This asks the question
+# directly instead of waiting for the producer: one line, every glyph its own
+# show-operation, and every detector must report the line rather than the
+# glyphs.
+# --------------------------------------------------------------------------
+
+
+def one_glyph_per_run(text: str, *, y: float = 200, **kw) -> tuple[TextRun, ...]:
+    """The same line, written the way Chrome writes it."""
+    return tuple(
+        run(ch, x=100 + i * 10, y=y, **kw) for i, ch in enumerate(text)
+    )
+
+
+def test_no_detector_reports_per_show_operation():
+    hidden = "HIDDEN"
+    cases = {
+        "covered-text": (
+            InterpretedPage(
+                number=1,
+                box=PAGE,
+                texts=one_glyph_per_run(hidden),
+                shapes=(bar(95, 195, 200, 215, order=99),),
+            ),
+            covered_text,
+        ),
+        "invisible-text": (
+            InterpretedPage(
+                number=1, box=PAGE, texts=one_glyph_per_run(hidden, mode=3), shapes=()
+            ),
+            invisible_text,
+        ),
+        "low-contrast-text": (
+            InterpretedPage(
+                number=1, box=PAGE, texts=one_glyph_per_run(hidden, fill=WHITE), shapes=()
+            ),
+            low_contrast_text,
+        ),
+        "off-page-text": (
+            InterpretedPage(
+                number=1,
+                box=Rect(0, 0, 90, 842),
+                texts=one_glyph_per_run(hidden),
+                shapes=(),
+            ),
+            off_page_text,
+        ),
+    }
+    for name, (page, detector) in cases.items():
+        found = detector(page)
+        assert len(found) == 1, f"{name} reported {len(found)} findings for one line"
+        assert found[0].machine_reads == hidden, f"{name} did not read the whole line"
+
+
+def test_words_are_not_counted_per_show_operation():
+    from unmasker.pdf.detectors import _words_of
+
+    page = InterpretedPage(
+        number=1, box=PAGE, texts=one_glyph_per_run("HIDDEN"), shapes=()
+    )
+    assert ["".join(g.char for g in w) for w in _words_of(page)] == ["HIDDEN"]
