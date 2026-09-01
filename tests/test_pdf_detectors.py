@@ -16,6 +16,8 @@ from conftest import page_of
 
 from unmasker.findings import Basis
 from unmasker.pdf.detectors import (
+    _angle_of,
+    _lines,
     covered_text,
     invisible_text,
     low_contrast_text,
@@ -30,8 +32,19 @@ PAGE = Rect(0, 0, 595, 842)
 
 
 def glyphs(text: str, x: float = 100, y: float = 200, width: float = 10) -> tuple:
+    """A horizontal run's glyphs, with the origin the line grouping keys on.
+
+    Setting `origin` matters: it defaults to (0, 0), so a fixture that left it
+    alone would put every glyph on one line and quietly stop testing the
+    grouping at all.
+    """
     return tuple(
-        Glyph(char=ch, code=ord(ch), bbox=Rect(x + i * width, y, x + (i + 1) * width, y + 10))
+        Glyph(
+            char=ch,
+            code=ord(ch),
+            bbox=Rect(x + i * width, y, x + (i + 1) * width, y + 10),
+            origin=(x + i * width, y),
+        )
         for i, ch in enumerate(text)
     )
 
@@ -897,3 +910,129 @@ def test_the_ordinary_lines_of_that_specimen_are_still_judged():
     assert invisible_text(interpreted) == []
     note = " ".join(remarks(interpreted))
     assert "31 characters" in note, note
+
+
+# --------------------------------------------------------------------------
+# rotated text
+#
+# Every detector that reports a line groups the page's glyphs into lines
+# first, and it used to do that by the bottom of the glyph box. That is exact
+# for horizontal text and wrong for anything else: turn a line ninety degrees
+# and every glyph has a different bottom edge and the same left edge, so one
+# hidden line becomes one finding per letter. Measured on this specimen before
+# the fix: 15 findings for one rotated line.
+#
+# The same failure Chrome's one-glyph-per-Tj produced on covered_text, from a
+# completely different direction, and the grouping that fixed the first did
+# not survive the second.
+# --------------------------------------------------------------------------
+
+ROTATED = "libreoffice-calc-rotated-headers.pdf"
+
+
+def test_a_hidden_rotated_line_is_one_finding():
+    found = low_contrast_text(interpret_page(page_of(ROTATED)))
+    assert len(found) == 1
+
+
+def test_the_rotated_line_is_read_in_order():
+    """Sorting a rotated line by x puts every glyph in one place and the order
+    is whatever the file happened to emit. It has to be sorted along the
+    direction the text advances, which here is up the page."""
+    (found,) = low_contrast_text(interpret_page(page_of(ROTATED)))
+    assert found.machine_reads == "WITHDRAWN 196000"
+
+
+def test_the_rotated_headers_that_are_visible_are_not_reported():
+    """Rotated column headers are ordinary spreadsheet practice. Reporting the
+    two black ones would make the detector useless on any wide table."""
+    (found,) = low_contrast_text(interpret_page(page_of(ROTATED)))
+    assert "Technical" not in found.machine_reads
+    assert "Price" not in found.machine_reads
+
+
+def test_the_horizontal_body_text_is_not_reported():
+    found = low_contrast_text(interpret_page(page_of(ROTATED)))
+    assert not any("Kowalski" in f.machine_reads for f in found)
+
+
+def test_rotated_and_horizontal_text_never_share_a_line():
+    """Two glyphs can sit at the same height and belong to lines running at
+    right angles to each other. Bucketing on position alone merges them, and
+    the report then quotes a line that does not exist anywhere on the page."""
+    page = interpret_page(page_of(ROTATED))
+    for line in _lines(page):
+        texts = {round(_angle_of(run), 1) for _, run in line}
+        assert len(texts) == 1, "one line held glyphs running at two angles"
+
+
+def test_the_rotated_specimen_reports_nothing_else():
+    """One file, one thing to prove. At the default column width the bidder
+    names overflow and LibreOffice clips them, which `off-page-text` correctly
+    reports - a true finding about a clipped letter of ordinary visible text,
+    and nothing to do with rotation. The specimen was widened rather than the
+    detector tuned; `HANDOFF.md` records that no rule separates a cell boundary
+    from concealment."""
+    page = interpret_page(page_of(ROTATED))
+    assert covered_text(page) == []
+    assert text_under_image(page) == []
+    assert invisible_text(page) == []
+    assert off_page_text(page) == []
+
+
+def upright(text: str, *, x: float = 300, y: float = 400, height: float = 10) -> TextRun:
+    """A run reading *down* the page, emitted in reverse order.
+
+    Both halves matter. The direction makes the line vertical; the reversed
+    emission makes the ordering testable, because a sort that keys on
+    something constant along the line is stable and would quietly hand back
+    whatever order the file happened to use.
+    """
+    gs = tuple(
+        Glyph(
+            char=ch,
+            code=ord(ch),
+            bbox=Rect(x, y - (i + 1) * height, x + 10, y - i * height),
+            origin=(x, y - i * height),
+        )
+        for i, ch in enumerate(text)
+    )
+    return TextRun(
+        text=text,
+        glyphs=tuple(reversed(gs)),
+        bbox=Rect(x, y - len(text) * height, x + 10, y),
+        font="F1",
+        size=10,
+        render_mode=0,
+        fill=WHITE,
+        direction=(0.0, -1.0),
+        order=0,
+    )
+
+
+def test_a_rotated_line_is_read_along_its_own_direction():
+    """The specimen cannot catch this on its own: its glyphs happen to be
+    emitted in reading order, so a sort keyed on anything constant along the
+    line returns them unchanged. Reversing the emission is what makes the
+    ordering rule testable."""
+    page = InterpretedPage(number=1, box=PAGE, texts=(upright("HIDDEN"),), shapes=())
+    (found,) = low_contrast_text(page)
+    assert found.machine_reads == "HIDDEN"
+
+
+def test_a_rotated_line_and_a_horizontal_one_never_merge():
+    """Two glyphs can sit the same distance across lines running at right
+    angles to each other. Without the angle in the key they share a bucket, and
+    the report then quotes a line that exists nowhere on the page.
+
+    Here both land at 200: the horizontal run by its height, the vertical one
+    by its distance from the left edge.
+    """
+    page = InterpretedPage(
+        number=1,
+        box=PAGE,
+        texts=(run("flat", y=200, fill=WHITE), upright("DOWN", x=200, y=500)),
+        shapes=(),
+    )
+    reported = {f.machine_reads for f in low_contrast_text(page)}
+    assert reported == {"flat", "DOWN"}

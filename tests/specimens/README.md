@@ -41,6 +41,7 @@ which RFC 2606 reserves for the purpose.
 | [`xlsx/libreoffice-calc-tracked-changes.xlsx`](xlsx/libreoffice-calc-tracked-changes.md) | LibreOffice 24.2 Calc | the same bid | the same three changes, in a revision log of three parts |
 | [`xlsx/libreoffice-calc-formatted-values.xlsx`](xlsx/libreoffice-calc-formatted-values.md) | LibreOffice 24.2 Calc | a timetable with a row missing | a hidden date stored as `45366` and a reserve stored as `240000` |
 | [`ods/libreoffice-calc-formatted-values.ods`](ods/libreoffice-calc-formatted-values.md) | LibreOffice 24.2 Calc | the same timetable | the same row, with the displayed text kept in the cell |
+| [`pdf/libreoffice-calc-rotated-headers.pdf`](pdf/libreoffice-calc-rotated-headers.md) | LibreOffice 24.2 Calc | two rotated headers and a column that looks empty | a third header, sideways, white on the paper |
 
 Every specimen that hides text *on the page* is also found by `--ocr`, which
 renders the page and reads the picture back and knows none of the mechanisms —
@@ -101,8 +102,10 @@ Named here so their absence is not mistaken for coverage:
   it reaches the file — LibreOffice into dozens of solid strips, Chrome into a
   single fill — so no producer here emits `sh` at all.
 - **XMP outside a PDF.** DOCX, JPEG and TIFF carry packets too.
-- **Rotated or vertically-set text.** Lines are grouped by the bottom of the
-  glyph box, which is exact for horizontal text and wrong for anything else.
+- **An angle other than 0 or 90 degrees**, and text rotated by a page's
+  `/Rotate` entry rather than by the content stream. The grouping is general -
+  it projects onto the text direction - but only the right angle is exercised
+  by a producer.
 - **Producers not on this machine.** Acrobat and Word draw their own way, and
   LibreOffice and Chrome already disagree with each other.
 - **An annotation carrying an appearance stream.** Comments now have a

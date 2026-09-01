@@ -39,6 +39,8 @@ it covers were settled by poppler rather than by anything here.
 
 from __future__ import annotations
 
+import math
+
 from ..findings import Basis, Finding, Location
 from .geometry import WHITE, Colour, Rect
 from .interpreter import Glyph, InterpretedPage, Shape, TextRun
@@ -108,6 +110,12 @@ def _painted(run: TextRun) -> bool:
     return run.render_mode in PAINTING_MODES and not run.is_invisible
 
 
+def _angle_of(run: TextRun) -> float:
+    """The angle this run's text advances at, in degrees."""
+    dx, dy = run.direction
+    return math.degrees(math.atan2(dy, dx))
+
+
 def _lines(page: InterpretedPage, include=_painted) -> list[list[tuple[Glyph, TextRun]]]:
     """Every painted glyph on the page, gathered into lines and ordered.
 
@@ -117,20 +125,42 @@ def _lines(page: InterpretedPage, include=_painted) -> list[list[tuple[Glyph, Te
     detector that reported per run would turn one black bar into eighty-seven
     findings on the same document LibreOffice reported as four.
 
-    Lines are bucketed by the bottom of the glyph box, rounded to the point.
-    That is exact for horizontal text and wrong for rotated text, which no
-    specimen yet contains - see `tests/specimens/README.md`.
+    A line is glyphs that share an angle and sit at the same distance across
+    it, ordered by how far along it they are. Three things follow from stating
+    it that way rather than as "the same bottom edge, sorted left to right":
+
+    **A rotated line is one line.** Turn text ninety degrees and every glyph
+    has a different bottom edge and the same left edge, so the old rule
+    reported one hidden line as one finding per letter - measured at fifteen
+    on `libreoffice-calc-rotated-headers.pdf`. It is the same failure Chrome's
+    one-glyph-per-`Tj` produced, arriving from a different direction.
+
+    **The angle is part of the key**, so a rotated header and a horizontal cell
+    that happen to sit at the same height never merge into a line that exists
+    nowhere on the page.
+
+    **Position comes from the glyph's origin, not its box.** The origin is on
+    the baseline, so a superscript stays on the line it belongs to; the box's
+    bottom edge is the descent, which a smaller font puts somewhere else.
     """
-    buckets: dict[int, list[tuple[Glyph, TextRun]]] = {}
+    buckets: dict[tuple[int, int], list[tuple[Glyph, TextRun]]] = {}
     for run in page.texts:
         if not include(run):
             continue
+        dx, dy = run.direction
+        angle = round(_angle_of(run))
         for glyph in run.glyphs:
-            buckets.setdefault(round(glyph.bbox.y0), []).append((glyph, run))
-    return [
-        sorted(entries, key=lambda pair: pair[0].bbox.x0)
-        for _, entries in sorted(buckets.items(), reverse=True)
-    ]
+            x, y = glyph.origin
+            # Distance across the line: the origin projected onto the
+            # perpendicular. For horizontal text this is exactly the baseline
+            # height, which is what it used to be.
+            buckets.setdefault((angle, round(-x * dy + y * dx)), []).append((glyph, run))
+
+    def along(pair: tuple[Glyph, TextRun]) -> float:
+        glyph, run = pair
+        return glyph.origin[0] * run.direction[0] + glyph.origin[1] * run.direction[1]
+
+    return [sorted(entries, key=along) for _, entries in sorted(buckets.items(), reverse=True)]
 
 
 def _readable(text: str) -> str:
@@ -646,20 +676,26 @@ def low_contrast_text(page: InterpretedPage) -> list[Finding]:
     near match is `CIRCUMSTANTIAL`, because a difference this small may still
     be legible on a good screen and because light grey is a legitimate way to
     set a watermark. The measured difference is in the summary either way.
+
+    Grouped by line, like every other detector here. This one was reporting per
+    show-operation for longer than the others because LibreOffice writes whole
+    words per operation in horizontal text, so nothing showed - until a page of
+    *rotated* cells, where it writes one glyph at a time and one hidden line
+    came out as fifteen findings. Third time this rule has been broken in a
+    different place: `covered_text` had it with Chrome, `invisible_text` had it
+    with tesseract.
     """
     findings: list[Finding] = []
-    for run in page.texts:
-        if run.render_mode not in PAINTING_MODES or run.is_invisible:
-            continue  # invisible_text's finding, not this one
-        ink = _ink(run)
-        if ink is None or not run.text.strip():
-            continue
-
-        glyphs = list(run.glyphs)
-        behind = [_background(page, g, run) for g in glyphs]
+    for line in _lines(page):
+        glyphs = [glyph for glyph, _ in line]
+        runs = [run for _, run in line]
+        inks = [_ink(run) for run in runs]
+        behind = [_background(page, g, run) for g, run in line]
         gaps = [
-            None if b is None else max(abs(x - y) for x, y in zip(ink.rgb, b.rgb, strict=True))
-            for b in behind
+            None
+            if b is None or ink is None
+            else max(abs(x - y) for x, y in zip(ink.rgb, b.rgb, strict=True))
+            for ink, b in zip(inks, behind, strict=True)
         ]
         flags = [g is not None and g <= CONTRAST for g in gaps]
 
@@ -669,6 +705,8 @@ def low_contrast_text(page: InterpretedPage) -> list[Finding]:
                 continue
             worst = max(gaps[i] for i in range(start, stop))
             paper = behind[start]
+            ink = inks[start]
+            run = runs[start]
             findings.append(
                 Finding(
                     detector="low-contrast-text",

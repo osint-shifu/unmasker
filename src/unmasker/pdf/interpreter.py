@@ -34,6 +34,7 @@ only layer that knows the interpreter gave up is the interpreter.
 
 from __future__ import annotations
 
+import math
 from collections import Counter
 from dataclasses import dataclass, field
 
@@ -149,6 +150,13 @@ class Shape:
         return self.alpha >= 0.999
 
 
+def _unit(dx: float, dy: float) -> tuple[float, float]:
+    """The direction, normalised. A degenerate matrix reads as horizontal,
+    which is what a run with no extent would have been treated as anyway."""
+    length = math.hypot(dx, dy)
+    return (dx / length, dy / length) if length else (1.0, 0.0)
+
+
 @dataclass(frozen=True)
 class Glyph:
     """One character, and the box it occupies on the page.
@@ -162,6 +170,17 @@ class Glyph:
     char: str
     code: int
     bbox: Rect
+
+    origin: tuple[float, float] = (0.0, 0.0)
+    """Where the glyph sits on its baseline, in page coordinates.
+
+    `bbox` is an axis-aligned box *covering* the glyph, which is what overlap
+    geometry needs and what line grouping must not use: turn a line ninety
+    degrees and every glyph in it has a different bottom edge. The origin is
+    the point the text matrix put the glyph at, so it is constant along a line
+    whatever angle the line runs at - and it is the baseline rather than the
+    descent, so a superscript stays on the line it belongs to.
+    """
 
 
 @dataclass(frozen=True)
@@ -177,6 +196,15 @@ class TextRun:
     fill: Colour | None = None
     stroke: Colour | None = None
     clip: Rect | None = None
+
+    direction: tuple[float, float] = (1.0, 0.0)
+    """The unit vector the text advances along, in page coordinates.
+
+    Carried because a run can be a single glyph - Chrome writes one per `Tj` -
+    so the direction cannot be recovered from the glyphs afterwards, and
+    without it a rotated line cannot be told from a column of separate lines.
+    """
+
     order: int = 0
     """Position in the painting order; see `Shape.order`."""
 
@@ -387,7 +415,12 @@ class _Interpreter:
                     )
                 ]
                 glyphs.append(
-                    Glyph(char=font.char(code), code=code, bbox=Rect.from_points(corners))
+                    Glyph(
+                        char=font.char(code),
+                        code=code,
+                        bbox=Rect.from_points(corners),
+                        origin=trm.apply(0, 0),
+                    )
                 )
                 # Word spacing applies to byte 32, and only in a single-byte
                 # encoding - in a CID font code 32 is an ordinary glyph.
@@ -406,8 +439,20 @@ class _Interpreter:
             if not glyphs:
                 return
             font = state.font
+            # The direction depends only on the linear part of the rendering
+            # matrix, which advancing along the line does not change - so the
+            # matrix as it stands after the run gives the same answer as the
+            # one each glyph was placed with.
+            placement = (
+                Matrix(state.size * state.scale, 0, 0, state.size, 0, state.rise)
+                .then(text_matrix)
+                .then(state.ctm)
+            )
+            start = placement.apply(0, 0)
+            along = placement.apply(1, 0)
             self.texts.append(
                 TextRun(
+                    direction=_unit(along[0] - start[0], along[1] - start[1]),
                     text="".join(g.char for g in glyphs),
                     glyphs=tuple(glyphs),
                     bbox=Rect.from_points(
