@@ -181,3 +181,80 @@ def test_a_plain_file_has_nothing_drawn(tmp_path):
     f = tmp_path / "n.txt"
     f.write_text("hello", encoding="utf-8")
     assert read(f).drawn == ()
+
+
+# --------------------------------------------------------------------------
+# presentations, which this tool does not read
+#
+# The dangerous case is not the one it refuses. An .odp is a zip with a
+# content.xml in it, which is also the description of an .odt, so it used to
+# reach the reader for text documents - and that reader has no concept of a
+# slide nobody sees. It read a hidden slide's text and a speaker note as
+# ordinary visible prose and then reported the deck clean, which is the same
+# defect the spreadsheet reader was written to remove, one container over.
+#
+# Refusing is the honest answer until there is a reader, and until there is a
+# specimen a real producer wrote. `libreoffice-impress` is not installed on
+# this machine, so nothing here can produce one - see HANDOFF.md.
+# --------------------------------------------------------------------------
+
+PRESENTATION = "urn:oasis:names:tc:opendocument:xmlns:presentation:1.0"
+
+
+def _odp(path):
+    import zipfile
+
+    with zipfile.ZipFile(path, "w") as z:
+        z.writestr("mimetype", "application/vnd.oasis.opendocument.presentation")
+        z.writestr(
+            "content.xml",
+            '<office:document-content'
+            ' xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0"'
+            ' xmlns:draw="urn:oasis:names:tc:opendocument:xmlns:drawing:1.0"'
+            f' xmlns:presentation="{PRESENTATION}"'
+            ' xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0">'
+            "<office:body><office:presentation>"
+            '<draw:page draw:name="shown"><text:p>Quarterly review</text:p></draw:page>'
+            '<draw:page draw:name="cut"><text:p>SLIDE THAT IS HIDDEN</text:p>'
+            "<presentation:notes><text:p>Do not say the headcount out loud.</text:p>"
+            "</presentation:notes></draw:page>"
+            "</office:presentation></office:body></office:document-content>",
+        )
+    return path
+
+
+def test_an_opendocument_presentation_is_refused_rather_than_read_as_prose(tmp_path):
+    with pytest.raises(UnreadableFile) as refusal:
+        read(_odp(tmp_path / "deck.odp"))
+    assert "presentation" in str(refusal.value)
+
+
+def test_the_refusal_says_what_would_have_to_change(tmp_path):
+    """A message that only says no teaches a reader nothing. This one names
+    the thing that is missing, so the answer to `why not` is on the screen."""
+    with pytest.raises(UnreadableFile) as refusal:
+        read(_odp(tmp_path / "deck.odp"))
+    assert "slide" in str(refusal.value).lower()
+
+
+def test_a_hidden_slide_is_never_reported_as_visible_text(tmp_path):
+    """The regression. Reading a deck as a text document does not merely miss
+    a finding: it hands concealed content to the detectors as though a person
+    could see it, and then reports the file clean."""
+    from unmasker.cli import main
+
+    assert main([str(_odp(tmp_path / "deck.odp"))]) == 2
+
+
+def test_a_powerpoint_file_is_refused_the_same_way(tmp_path):
+    """Both families, one answer. The two disagreeing about whether a deck can
+    be read would be the tool contradicting itself."""
+    import zipfile
+
+    f = tmp_path / "deck.pptx"
+    with zipfile.ZipFile(f, "w") as z:
+        z.writestr("[Content_Types].xml", "<Types/>")
+        z.writestr("ppt/presentation.xml", "<presentation/>")
+    with pytest.raises(UnreadableFile) as refusal:
+        read(f)
+    assert "presentation" in str(refusal.value)

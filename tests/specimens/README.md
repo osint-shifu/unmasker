@@ -122,10 +122,11 @@ Named here so their absence is not mistaken for coverage:
 - **Excel and Word themselves.** Neither is on this machine, so every OOXML
   file here was written by LibreOffice.
 - **Presentations.** `.pptx` and `.odp` are the same containers again, with
-  hidden slides and speaker notes in place of hidden rows, and nothing here
-  reads or tests one. An `.odp` still goes to the reader for text documents,
-  which is the defect the spreadsheet pair was built to fix, one container
-  over.
+  hidden slides and speaker notes in place of hidden rows. Both now refuse
+  rather than being half-read, and neither has a specimen: **`libreoffice-
+  impress` is not installed on this machine**, so no producer here can write a
+  deck at all. This is the one gap on the list that cannot be closed by
+  writing more code.
 - **Word's own OOXML.** Word is not on this machine, so every DOCX here was
   written by LibreOffice. It emits valid revision markup, but two producers
   never agree about everything — the PDF specimens proved that twice.

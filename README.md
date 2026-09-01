@@ -58,6 +58,11 @@ has to earn its place the same way.
 Reads PDF, DOCX, ODT, XLSX, ODS and any text file. Local, read-only, no
 network, and it never writes to the file it is given.
 
+Presentations — `.pptx` and `.odp` — are **refused**, with a message saying so.
+Reading a deck as a text document would report a hidden slide and a speaker
+note as visible text and then call the file clean, and saying less is better
+than saying something untrue.
+
 | | |
 | --- | --- |
 | `--json` | one object on stdout, for a pipeline that wants to sort or filter |
