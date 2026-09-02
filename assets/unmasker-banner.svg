@@ -33,8 +33,4 @@
     <text x="636" y="126">HUMAN SEES</text>
     <text x="636" y="222">MACHINE READS</text>
   </g>
-
-  <line x1="250" y1="256" x2="790" y2="256" stroke="#d8dbde" stroke-width="1"/>
-
-  <text x="250" y="283" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, &quot;Liberation Mono&quot;, monospace" font-size="18" fill="#6a7075">A bar drawn over text is not a redaction.</text>
 </svg>
