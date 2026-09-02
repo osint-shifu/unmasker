@@ -25,7 +25,7 @@ import shutil
 import sys
 from pathlib import Path
 
-from . import __version__
+from . import __version__, about
 from .findings import Finding
 from .metadata.detectors import detect as detect_metadata
 from .pdf.detectors import detect as detect_drawn
@@ -93,6 +93,16 @@ def collect(extraction, ocr: bool = False) -> list[Finding]:
     return sorted(found, key=lambda f: f.location.sort_key)
 
 
+def _style(width: int | None) -> Style:
+    """One place that decides how wide the output is and how much colour it may
+    use, so the report and the landing screen can never disagree about it."""
+    return Style(
+        depth=resolve_depth(sys.stdout),
+        width=width or min(100, max(50, shutil.get_terminal_size((78, 24)).columns)),
+        glyph=glyphs(sys.stdout),
+    )
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="unmasker",
@@ -105,7 +115,10 @@ def build_parser() -> argparse.ArgumentParser:
             "findings, and 2 when the file could not be read."
         ),
     )
-    parser.add_argument("file", type=Path, help="the document to read")
+    # Optional, so a bare `unmasker` can introduce itself instead of printing
+    # `error: the following arguments are required`, which tells a reader they
+    # were wrong and nothing else.
+    parser.add_argument("file", type=Path, nargs="?", help="the document to read")
     # A description that restates its flag teaches the reader to skip
     # descriptions, and once they skip one they skip the rest.
     parser.add_argument(
@@ -136,6 +149,13 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+
+    if args.file is None:
+        # Nothing was read and nothing was searched, so this is not a result:
+        # exit 0 means "no findings", and a screen that introduces the tool has
+        # no findings to report.
+        sys.stdout.write(about.render(_style(args.width)))
+        return 0
 
     try:
         extraction = read(args.file)
@@ -174,9 +194,7 @@ def main(argv: list[str] | None = None) -> int:
         )
         sys.stdout.write("\n")
     else:
-        width = args.width or min(100, max(50, shutil.get_terminal_size((78, 24)).columns))
-        style = Style(depth=resolve_depth(sys.stdout), width=width, glyph=glyphs(sys.stdout))
-        sys.stdout.write(render(str(args.file), extraction, findings, style))
+        sys.stdout.write(render(str(args.file), extraction, findings, _style(args.width)))
 
     return 1 if findings else 0
 
