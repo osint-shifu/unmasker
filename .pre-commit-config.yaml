@@ -1,0 +1,9 @@
+# Lint only. This project does not auto-format: the report layout, the
+# specimens' XML and the docstrings are placed deliberately, and `ruff format`
+# would rewrite a dozen files nobody asked it to. CI runs the same check.
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.9
+    hooks:
+      - id: ruff
+        args: [--fix]

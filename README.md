@@ -1,6 +1,27 @@
-# unmasker
+<a id="top"></a>
 
-**What a human sees in a document, against what a machine reads out of it.**
+<div align="center">
+  <img src="assets/unmasker-banner.svg" alt="unmasker - what a human sees, against what a machine reads" width="820">
+  <p>
+    <img alt="Python 3.10+" src="https://img.shields.io/badge/python-3.10%2B-3776AB?style=flat-square">
+    <img alt="22 detectors" src="https://img.shields.io/badge/detectors-22-8250df?style=flat-square">
+    <img alt="One runtime dependency" src="https://img.shields.io/badge/runtime_dependencies-1-1f883d?style=flat-square">
+    <img alt="Local and read-only" src="https://img.shields.io/badge/local_%26_read--only-yes-1f883d?style=flat-square">
+    <img alt="Network requests" src="https://img.shields.io/badge/network_requests-none-1f883d?style=flat-square">
+    <img alt="License: Apache 2.0" src="https://img.shields.io/badge/license-Apache--2.0-8250df?style=flat-square">
+    <a href="https://github.com/osint-shifu/unmasker/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/osint-shifu/unmasker/actions/workflows/ci.yml/badge.svg"></a>
+  </p>
+  <p>
+    <a href="#why">Why</a> ·
+    <a href="#using-it">Using it</a> ·
+    <a href="#what-it-finds">What it finds</a> ·
+    <a href="#how-it-decides-what-to-say">How it decides</a> ·
+    <a href="#how-it-is-tested">Testing</a> ·
+    <a href="#what-it-does-not-do">Limits</a>
+  </p>
+</div>
+
+---
 
 A black rectangle drawn over text is not a redaction. The text is still in the
 file and every parser reads it. `unmasker` reports each place the two layers

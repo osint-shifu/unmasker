@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1040 300" width="1040" height="300" role="img" aria-label="unmasker — what a human sees, against what a machine reads">
+  <title>unmasker — What a human sees in a document, against what a machine reads out of it.</title>
+
+  <!--
+    The mark is built by the mistake it reports. The word is drawn first, in
+    full; the bar is drawn over it afterwards, and it is five characters wide
+    against a word of eight. Nothing is removed - `ker` escapes because the bar
+    was dragged too short, which is exactly how a failed redaction is made.
+
+    Paper and ink, not a terminal. `filetrail` is a dark screen; this is the
+    document the screen is looking at. The two tools share a design language
+    and the rule that colour encodes how the tool knows - they do not share an
+    identity, and a reader with both installed should never have to wonder
+    which one is talking.
+
+    Geometry: a monospace advance is 0.6em, so eight characters at 72px is
+    345.6 wide and the five the bar covers are 216. Every x below is derived
+    from those two numbers rather than nudged until it looked right.
+  -->
+
+  <rect width="1040" height="300" fill="#f2f3f4"/>
+
+  <g font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, &quot;Liberation Mono&quot;, monospace" font-size="72">
+    <!-- what a human sees: the word, and then the bar on top of it -->
+    <text x="250" y="132" fill="#12151a">unmasker</text>
+    <rect x="250" y="74" width="216" height="72" fill="#12151a"/>
+
+    <!-- what a machine reads: the same word, with nothing over it -->
+    <text x="250" y="228" fill="#6a7075">unmasker</text>
+  </g>
+
+  <g font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, &quot;Liberation Mono&quot;, monospace" font-size="16" letter-spacing="1.6" fill="#9aa0a6">
+    <text x="636" y="126">HUMAN SEES</text>
+    <text x="636" y="222">MACHINE READS</text>
+  </g>
+
+  <line x1="250" y1="256" x2="790" y2="256" stroke="#d8dbde" stroke-width="1"/>
+
+  <text x="250" y="283" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, &quot;Liberation Mono&quot;, monospace" font-size="18" fill="#6a7075">A bar drawn over text is not a redaction.</text>
+</svg>
