@@ -2,9 +2,9 @@
 
 `filetrail` reads these same fields, and more containers than this does. It
 answers a different question with them - *where did this file come from* - and
-reports each as an origin claim. `/data/filetrail/src/filetrail/sources/
-embedded/documents.py` is the implementation, and it was read before this one
-was written, as `CLAUDE.md` requires. Two things were taken from it: that dates
+reports each as an origin claim. `the sibling project's
+embedded metadata sources documents.py` is the implementation, and it was read before this one
+was written, as `CONTRIBUTING.md` requires. Two things were taken from it: that dates
 have to be normalised out of each container's own format, and that every
 property should be kept rather than a chosen few, because no fixed list
 anticipates which one an investigation will want.
@@ -13,7 +13,7 @@ What is different here is the roles.
 
 ## The name of a field is evidence
 
-`CLAUDE.md` sets out the worked example. `LibreOffice/24.2.7.2$Linux_X86_64`
+`CONTRIBUTING.md` sets out the worked example. `LibreOffice/24.2.7.2$Linux_X86_64`
 contains a dotted quad; pattern-matching alone reports an IP address; the field
 is called `Application`, so it is a version. Context you already have beats a
 cleverer pattern.

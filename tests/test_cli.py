@@ -1,6 +1,6 @@
 """The command line, the exit codes and the report.
 
-Three rules from `CLAUDE.md` are load-bearing here and each has a test:
+Three rules from `CONTRIBUTING.md` are load-bearing here and each has a test:
 
 - **Nothing is truncated.** A value too long for the line wraps; it never ends
   in an ellipsis. A reader who has to fetch the value another way did not need
@@ -10,7 +10,7 @@ Three rules from `CLAUDE.md` are load-bearing here and each has a test:
   `filetrail` printed `filetrail --help` at someone who had not installed it,
   and the screen was disproved by the first thing they tried.
 
-The exit code is the CI gate. `HANDOFF.md` records the decision that there is no
+The exit code is the CI gate. There is deliberately no
 `--strict`: the default non-zero exit when findings exist *is* the gate, and a
 second channel of meaning before the classes of finding are known is easy to add
 later and hard to remove.
@@ -334,7 +334,7 @@ def test_the_metadata_leak_specimen_names_people_the_page_does_not(capsys):
 
 
 def test_the_producer_string_stays_in_the_notes_and_out_of_the_findings(capsys):
-    """CLAUDE.md's worked example, end to end. `LibreOffice/24.2.7.2$Linux_X86_64`
+    """CONTRIBUTING.md's worked example, end to end. `LibreOffice/24.2.7.2$Linux_X86_64`
     has a dotted quad in it and must never be reported as anything but the
     version of the application that wrote the file."""
     docx = Path(__file__).parent / "specimens" / "docx"
@@ -377,7 +377,7 @@ def test_a_pdf_comment_reaches_the_report(capsys):
 
 
 def test_ocr_is_off_unless_it_is_asked_for(capsys):
-    """HANDOFF.md decision 4: rendering and reading a page back needs two heavy
+    """Rendering and reading a page back needs two heavy
     external binaries and costs seconds a page. The reason it was deferred is
     the reason it is not the default."""
     code, out, _ = run(capsys, str(SPECIMENS / "libreoffice-writer-black-bars.pdf"), "--json")

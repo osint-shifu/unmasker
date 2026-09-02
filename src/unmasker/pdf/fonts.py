@@ -2,7 +2,7 @@
 
 ## The line this module walks
 
-`HANDOFF.md` is explicit: **do not write a font decoder.** The specimens prove
+**Do not write a font decoder.** The specimens prove
 why - their text is written `<010203040506>`, a subset font with an encoding
 invented by the producer, and resolving that from the glyph program is months of
 work for a result pypdf already has.

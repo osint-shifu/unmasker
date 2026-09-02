@@ -64,7 +64,7 @@ is `circumstantial` and its summary says so, quoting the visible remainder:
 **It is not suppressed, and that is the whole point of using the evidence class
 instead of a filter.** A redaction that clips only the second half of a line
 looks exactly like an overflow. A tool that deleted the finding would have
-decided for its reader, which is the one thing `CLAUDE.md` says it must never
+decided for its reader, which is the one thing `CONTRIBUTING.md` says it must never
 do. Making the claim weaker and saying why leaves the judgement where it
 belongs.
 

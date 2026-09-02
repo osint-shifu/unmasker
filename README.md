@@ -72,9 +72,8 @@ python3 -m venv .venv
 ```
 
 Python 3.10 or later, and one runtime dependency — `pypdf`, which is pure
-Python, BSD-licensed and has no dependencies of its own. The reasoning for
-having it at all is written down in [`HANDOFF.md`](HANDOFF.md); any second one
-has to earn its place the same way.
+Python, BSD-licensed and has no dependencies of its own. It was checked rather than
+assumed, and any second one has to earn its place the same way — in writing.
 
 Reads PDF, DOCX, ODT, XLSX, ODS and any text file. Local, read-only, no
 network, and it never writes to the file it is given.
@@ -237,11 +236,11 @@ nothing checked.
 
 ## Further
 
-- [`HANDOFF.md`](HANDOFF.md) — what this is, every decision and its reasoning,
-  and what was verified against real files
+- [`CONTRIBUTING.md`](CONTRIBUTING.md) — the rules this project works to, each
+  one named after the failure that produced it
 - [`tests/specimens/README.md`](tests/specimens/README.md) — the specimens, what
   each proves, and the gaps that are named rather than hidden
-- `/data/filetrail/DESIGN.md` — the design language the report follows
+- the sibling project's design notes — the design language the report follows
 
 ## License
 

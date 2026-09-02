@@ -3,7 +3,7 @@
 Most metadata is not a finding, and getting that wrong would cost more than
 missing it. Every PDF carries a Producer and every .docx an Application; if
 those produced findings the tool would exit non-zero on every document ever
-written, and the exit code - which `HANDOFF.md` records as the whole CI gate,
+written, and the exit code - which is the whole CI gate,
 in place of a `--strict` mode - would stop meaning anything.
 
 So the tool fields, the counts and the ordinary dates are remarks. What becomes

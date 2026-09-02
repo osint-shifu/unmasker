@@ -39,7 +39,7 @@ returns nothing.
 The tool must not say "no hidden text found" about this file. There is no text
 here to hide, and the honest report says so: the page has no text layer, so the
 question of what is under the bars cannot be answered from the text — it would
-need OCR, which `HANDOFF.md` records as deferred.
+need OCR, which was deferred for most of the project's life.
 
 `filetrail` grew a `doctor` command for exactly this distinction. Expect to need
 the equivalent, and expect this specimen to be the test for it.

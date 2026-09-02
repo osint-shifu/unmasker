@@ -190,7 +190,7 @@ def test_an_inline_image_becomes_a_shape():
 
 
 def test_an_operator_the_interpreter_does_not_know_is_remarked_not_ignored():
-    """`CLAUDE.md`: 'nothing found' must not mean 'we stopped looking'."""
+    """`CONTRIBUTING.md`: 'nothing found' must not mean 'we stopped looking'."""
     result = interpret_stream(b"0 0 0 rg 1 1 2 2 re f /Nonsense zzz", box=A4)
     assert len(result.shapes) == 1
     assert any("zzz" in r for r in result.remarks)
@@ -297,7 +297,7 @@ def test_page_content_reads_a_single_stream():
 
 
 def test_page_content_joins_an_array_of_streams():
-    """HANDOFF.md found both forms in the first PDF it looked at. No committed
+    """Both forms were found in the first PDF this project looked at. No committed
     specimen uses the array form, so this is the only thing holding it."""
     page = Stub(Contents=[StubStream(b"0 0 0 rg"), StubStream(b"1 1 5 5 re f")])
     assert interpret_stream(page_content(page), box=A4).shapes[0].colour.rgb == (0, 0, 0)

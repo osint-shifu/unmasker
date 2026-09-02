@@ -335,7 +335,7 @@ def detect(record: SheetRecord) -> list[Finding]:
 
     Additive, and none outranks another. A value can sit in a hidden row *and*
     a hidden column, and both findings state it: they are two answers to two
-    questions, and `CLAUDE.md` forbids ranking one against the other.
+    questions, and `CONTRIBUTING.md` forbids ranking one against the other.
     """
     return (
         hidden_sheets(record)

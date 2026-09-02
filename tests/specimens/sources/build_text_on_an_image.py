@@ -15,7 +15,7 @@ white - a conclusion about a picture it had never looked at.
 
 The file is therefore a control, and its value is in the second half of what
 the tool says about it: a note that there is text on an image and that the
-comparison could not be made. `CLAUDE.md`: "nothing found" has two meanings,
+comparison could not be made. `CONTRIBUTING.md`: "nothing found" has two meanings,
 and a reader who cannot tell them apart has been told something the tool never
 established.
 

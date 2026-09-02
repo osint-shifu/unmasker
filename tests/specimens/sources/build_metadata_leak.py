@@ -13,7 +13,7 @@ confident and partial idea of what metadata is.
 
 `Application` in the .docx comes out as `LibreOffice/24.2.7.2$Linux_X86_64
 LibreOffice_project/420$Build-2`. That string is the worked example in
-`CLAUDE.md`: it contains a dotted quad, pattern-matching alone reports an IP
+`CONTRIBUTING.md`: it contains a dotted quad, pattern-matching alone reports an IP
 address, and the field is called `Application`, so it is a version. There is a
 test that holds the tool to reading it as one.
 

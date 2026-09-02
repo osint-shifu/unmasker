@@ -1,7 +1,7 @@
 """PDF text, page by page.
 
 `pypdf` owns the object model, decompression, font decoding and text
-extraction; that division is argued for in `HANDOFF.md` and is most of the
+extraction; that division is most of the
 reason it is a dependency at all. What this module adds is the part `pypdf`
 cannot answer: whether a page that produced no text had none to produce.
 """
@@ -117,7 +117,7 @@ def read_pdf(path: Path) -> Extraction:
 def _how_to_ocr() -> str:
     """Name the flag only when it would actually work.
 
-    `CLAUDE.md`: every command the tool prints must run in the shell that
+    `CONTRIBUTING.md`: every command the tool prints must run in the shell that
     printed it. `filetrail` printed `filetrail --help` at somebody who had not
     installed it, and the screen was disproved by the first thing they tried.
     """

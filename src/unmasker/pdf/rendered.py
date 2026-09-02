@@ -1,11 +1,11 @@
 """Rendering a page and reading the picture back.
 
-`HANDOFF.md` decision 4 deferred this and recorded the reason: it needs an OCR
-engine and a renderer, two heavy external binaries, and that breaks *point it
-at a file, get an answer*. The reason still holds. So nothing here runs unless
-it is asked for, and when the binaries are absent the tool says so and carries
-on - a forensic tool that dies because an optional dependency is missing has
-made the dependency compulsory.
+This was deferred for most of the project's life, and the reason still holds:
+it needs an OCR engine and a renderer, two heavy external binaries, and that
+breaks *point it at a file, get an answer*. So nothing runs unless it is asked
+for, and when the binaries are absent the tool says so and carries on - a
+forensic tool that dies because an optional dependency is missing has made the
+dependency compulsory.
 
 ## What it buys
 

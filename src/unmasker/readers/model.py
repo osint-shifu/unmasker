@@ -1,9 +1,9 @@
 """What a reader hands back, and why it carries more than a string.
 
-`CLAUDE.md`: **"nothing found" has two meanings.** It can mean *searched, and it
-is not there*; it can mean *there was nothing to search*. `filetrail` grew a
-`doctor` command because that difference kept getting lost between the code that
-knew it and the report that printed it.
+**"Nothing found" has two meanings.** It can mean *searched, and it is not
+there*; it can mean *there was nothing to search*. `filetrail` grew a `doctor`
+command because that difference kept getting lost between the code that knew it
+and the report that printed it.
 
 So the difference is carried in the data, not reconstructed later. `has_text`
 answers whether there was anything to search at all, and `remarks` says why not

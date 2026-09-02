@@ -607,7 +607,7 @@ def annotation_text(page: InterpretedPage) -> list[Finding]:
 def remarks(page: InterpretedPage) -> list[str]:
     """What this page's detectors could not establish, as opposed to found.
 
-    `CLAUDE.md`: "nothing found" has two meanings, and a reader who cannot tell
+    `CONTRIBUTING.md`: "nothing found" has two meanings, and a reader who cannot tell
     them apart has been told something the tool never established. Silence
     about text sitting on a picture is one of the two: whether those glyphs are
     legible depends on what colour the picture is exactly where they sit, and

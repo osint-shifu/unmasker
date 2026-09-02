@@ -37,7 +37,7 @@ looking at the screen set it and knows they set it. Both put text in the file
 that is not on the screen, so both are reported — and they are not the same
 claim, so they are not reported the same way. The filtered rows are
 `circumstantial`: consistent with concealment, and consistent with an ordinary
-afternoon's work. `CLAUDE.md` asks for a word a reader can argue with, and this
+afternoon's work. `CONTRIBUTING.md` asks for a word a reader can argue with, and this
 is the case that word exists for.
 
 **The two rows are consecutive**, so the run-collapsing rule has a run to

@@ -199,7 +199,7 @@ def test_mixed_script_is_circumstantial_not_direct():
 
 
 def test_different_kinds_are_all_reported_and_none_outranks_another():
-    """CLAUDE.md: three findings, not one ranked list."""
+    """CONTRIBUTING.md: three findings, not one ranked list."""
     hidden = "".join(chr(0xE0000 + ord(c)) for c in "hi")
     found = scan_text(f"zero​width and ‮override and{hidden} and аpple")
     assert {f.detector for f in found} == {

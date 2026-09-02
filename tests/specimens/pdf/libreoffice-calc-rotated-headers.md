@@ -83,7 +83,7 @@ The specimen was widened rather than the detector tuned. A threshold that
 suppressed one-character findings would hide real ones, and the honest problem
 is that **no rule here separates a cell boundary from a redaction by clipping**
 — which is the same mechanism, used for two different purposes.
-`HANDOFF.md` records it as open.
+It is recorded as open.
 
 ## What this specimen does not carry
 

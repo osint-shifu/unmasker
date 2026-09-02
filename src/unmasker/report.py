@@ -1,7 +1,7 @@
 """The terminal report.
 
-The layout is `filetrail`'s, described in `/data/filetrail/DESIGN.md`, because
-`CLAUDE.md` says to read that before inventing a second design language. What
+The layout is `filetrail`'s, described in the sibling project's design notes, because
+`CONTRIBUTING.md` says to read that before inventing a second design language. What
 carries over:
 
 - **No boxes.** A frame costs two columns on every line it wraps, and nothing
@@ -169,7 +169,7 @@ def render(
 
     # The masthead must not contradict the footer. A file with no text layer
     # was not searched, and saying "nothing hidden found" about it is the
-    # confusion CLAUDE.md names: searched-and-empty is not nothing-to-search.
+    # confusion CONTRIBUTING.md names: searched-and-empty is not nothing-to-search.
     if findings:
         count = _plural(len(findings), "finding")
     elif extraction.has_text:

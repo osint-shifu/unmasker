@@ -1,7 +1,7 @@
 """Font metrics: how wide a glyph is, and which character it is.
 
-This is a table lookup, not a font decoder. `HANDOFF.md` forbids the second and
-it is right to: the specimens' text is written `<010203040506>` in a subset font
+This is a table lookup, not a font decoder. The second is forbidden here, and
+rightly: the specimens' text is written `<010203040506>` in a subset font
 with a custom encoding, and resolving that from the glyph program would be
 months. pypdf already resolves it, and this module asks pypdf for the answer.
 

@@ -971,7 +971,7 @@ def test_the_rotated_specimen_reports_nothing_else():
     names overflow and LibreOffice clips them, which `off-page-text` correctly
     reports - a true finding about a clipped letter of ordinary visible text,
     and nothing to do with rotation. The specimen was widened rather than the
-    detector tuned; `HANDOFF.md` records that no rule separates a cell boundary
+    detector tuned, and no rule here separates a cell boundary
     from concealment."""
     page = interpret_page(page_of(ROTATED))
     assert covered_text(page) == []

@@ -1,6 +1,6 @@
 """Turning a file into text, and being honest about how much text there was.
 
-The rule these tests exist to enforce is the one `CLAUDE.md` names: **"nothing
+The rule these tests exist to enforce is the one `CONTRIBUTING.md` names: **"nothing
 found" has two meanings.** It can mean *searched, and it is not there*. It can
 mean *there was nothing to search*. A reader who confuses the two has drawn a
 conclusion the tool never supported, so the extraction has to carry that
@@ -87,7 +87,7 @@ def test_pdf_text_includes_what_is_under_the_bars():
 
 
 def test_a_page_with_no_text_layer_says_so_and_does_not_pretend_it_searched():
-    """The distinction that CLAUDE.md says a reader must never have to guess."""
+    """The distinction that CONTRIBUTING.md says a reader must never have to guess."""
     got = read(SPECIMENS / "flattened-to-image.pdf")
     assert got.kind == "pdf"
     assert not got.has_text
@@ -166,7 +166,7 @@ def test_a_page_with_no_text_layer_says_what_is_painted_on_it_instead():
 
 
 def test_the_note_only_names_a_flag_that_would_work(monkeypatch):
-    """CLAUDE.md: every command the tool prints must run in the shell that
+    """CONTRIBUTING.md: every command the tool prints must run in the shell that
     printed it. filetrail printed `filetrail --help` at somebody who had not
     installed it, and the screen was disproved by the first thing they tried."""
     import unmasker.pdf.rendered as rendered
@@ -195,7 +195,7 @@ def test_a_plain_file_has_nothing_drawn(tmp_path):
 #
 # Refusing is the honest answer until there is a reader, and until there is a
 # specimen a real producer wrote. `libreoffice-impress` is not installed on
-# this machine, so nothing here can produce one - see HANDOFF.md.
+# this machine, so nothing here can produce one.
 # --------------------------------------------------------------------------
 
 PRESENTATION = "urn:oasis:names:tc:opendocument:xmlns:presentation:1.0"

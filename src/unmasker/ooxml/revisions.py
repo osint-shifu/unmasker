@@ -23,7 +23,7 @@ findings.
 
 ## No new dependency
 
-A .docx is a zip of XML and both are in the standard library. `HANDOFF.md`
+A .docx is a zip of XML and both are in the standard library. This project
 requires a second dependency to be argued for in writing, and there is no
 argument to make here.
 """

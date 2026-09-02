@@ -1,6 +1,6 @@
 """The evidence model.
 
-Two rules from `CLAUDE.md` shape everything here, and both were paid for in the
+Two rules from `CONTRIBUTING.md` shape everything here, and both were paid for in the
 sibling project.
 
 **Different questions are not ranked against each other.** A `Finding` carries
@@ -105,7 +105,7 @@ class Finding:
 
     codepoints: tuple[str, ...] = ()
     """Every codepoint behind this finding, in order, as `U+XXXX`. Not a
-    sample - `CLAUDE.md` forbids truncation, and a reader who has to run the
+    sample - `CONTRIBUTING.md` forbids truncation, and a reader who has to run the
     tool again to see the rest was told less than the tool knew."""
 
     decoded: str | None = None

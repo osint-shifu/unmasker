@@ -1,10 +1,10 @@
 """Reading the page back, and comparing it with what the file says.
 
-`HANDOFF.md` decision 4 deferred this and recorded why: it needs an OCR engine
-and a renderer, two heavy external binaries, and that breaks *point it at a
-file, get an answer*. The reason still holds, so this is off unless asked for.
-What has changed is that the rest stands, which is the condition the decision
-set for coming back to it.
+This was deferred for most of the project's life: it needs an OCR engine and a
+renderer, two heavy external binaries, and that breaks *point it at a file, get
+an answer*. The reason still holds, so it is off unless asked for. What changed
+is that the rest of the tool now stands, which was the condition set for coming
+back to it.
 
 ## Why it is worth the binaries
 

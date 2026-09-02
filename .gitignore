@@ -20,3 +20,11 @@ htmlcov/
 # Specimens are the test suite here and DO belong in git - see CLAUDE.md.
 # Only genuinely private material is excluded.
 private-samples/
+
+# Working notes, not documentation. HANDOFF.md is the running log of what was
+# tried and what it cost, and it names files from a sibling checkout that are
+# private. CONTRIBUTING.md is my rules for working in this repository. Neither
+# is something a reader of the published project needs, and the sibling project
+# tracks neither of its equivalents either.
+HANDOFF.md
+CLAUDE.md

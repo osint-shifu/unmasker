@@ -11,7 +11,7 @@ What made this worth doing was not the missing feature. Pointed at the .ods,
 hidden row, the hidden column and the hidden sheet as ordinary visible prose -
 a spreadsheet fell through to the reader for text documents, because both are
 a zip with a `content.xml` in it. That is the tool stating something the
-evidence does not support, which is the one thing `CLAUDE.md` forbids outright,
+evidence does not support, which is the one thing `CONTRIBUTING.md` forbids outright,
 and `test_the_hidden_values_are_not_read_as_visible_text` is the guard against
 its return.
 """
@@ -149,7 +149,7 @@ def test_the_hidden_row_names_its_sheet(specimen):
 def test_the_value_hidden_twice_over_is_still_reported_once_per_axis(specimen):
     """The withdrawn bidder's reserve price sits in the hidden row *and* the
     hidden column. Two findings state it, because they are two answers to two
-    questions - `CLAUDE.md` forbids ranking one against the other - and neither
+    questions - `CONTRIBUTING.md` forbids ranking one against the other - and neither
     is allowed to suppress the other."""
     assert len(by_detector(specimen, "hidden-rows")) == 1
     assert len(by_detector(specimen, "hidden-columns")) == 1
@@ -620,7 +620,7 @@ def test_the_ods_quotes_the_currency_the_way_the_sheet_shows_it():
 
 
 def test_the_note_names_the_format_the_sheet_applies():
-    """`CLAUDE.md`: nothing found has two meanings, and so does a value that
+    """`CONTRIBUTING.md`: nothing found has two meanings, and so does a value that
     does not match what a reader saw. The note says the quotation is the stored
     value and what the sheet does to it."""
     remarks = read(FORMATTED).remarks

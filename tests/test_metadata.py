@@ -12,7 +12,7 @@ every document ever written and the exit code would stop meaning anything.
 They are remarks. A name, a client, a codename or a path is a finding.
 
 The test that matters most here is
-`test_a_version_in_an_application_field_is_not_read_as_an_address`. `CLAUDE.md`
+`test_a_version_in_an_application_field_is_not_read_as_an_address`. `CONTRIBUTING.md`
 sets it out: `LibreOffice/24.2.7.2$Linux_X86_64` contains a dotted quad, and
 pattern-matching alone reports an IP address. The field is called
 `Application`. Context you already have beats a cleverer pattern.
@@ -53,7 +53,7 @@ def reads(findings, detector=None):
 
 
 def test_a_version_in_an_application_field_is_not_read_as_an_address():
-    """The worked example from CLAUDE.md, held to.
+    """The worked example from CONTRIBUTING.md, held to.
 
     `LibreOffice/24.2.7.2$Linux_X86_64` has a dotted quad in it. Nothing here
     may call it an address, a path, or a leak: the field is called

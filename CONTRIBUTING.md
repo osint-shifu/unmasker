@@ -92,6 +92,26 @@ URL and no GPS at all.
 
 Nothing here sorts by strength, and `Finding` carries no score.
 
+## "Nothing found" has two meanings
+
+It can mean *searched, and it is not there*. It can mean *there was nothing to
+search*. A reader who confuses those has drawn a conclusion the tool never
+supported.
+
+Carry the difference in the data rather than reconstructing it later — a PDF
+with no content stream to parse is not a PDF with nothing hidden, and the
+report has to be able to say which it met.
+
+## The name of a field is evidence
+
+`LibreOffice/24.2.7.2$Linux_X86_64` contains a dotted quad. Pattern-matching
+alone reports an IP address — but the field is called `Producer`, so it is a
+version. Every metadata field's meaning is decided by its name **and its
+container**: a PDF's `/Creator` is an application, an OOXML `dc:creator` is a
+person.
+
+Context you already have beats a cleverer pattern.
+
 ## Colour and words
 
 **Colour encodes how the tool knows, never how bad the finding is.** Three
@@ -101,14 +121,33 @@ the output may use colour.
 Prefer a word a reader can argue with over a number that implies a precision
 you do not have. `55` reads as a probability; it never was one.
 
+## Modes are commands, not flags
+
+If an option ignores most of the other options and is mutually exclusive with
+its neighbours, it is a subcommand. `--json` changes the shape of the output,
+not what the tool did, which is what keeps it a flag.
+
 ## Output
 
 - **Nothing is truncated.** A value too long for the line wraps. An ellipsis
   sends the reader to fetch the value another way.
 - **Nothing draws past the width it declared.**
+- **Size a column per section, not once per screen.** One global width makes a
+  layout look *almost* aligned, which reads worse than not aligning it.
 - A description that restates its flag teaches the reader to skip
   descriptions, and once they skip one they skip the rest.
-- Every command the tool prints must run in the shell that printed it.
+- Every command the tool prints must run in the shell that printed it. A screen
+  disproved by the first thing a reader tries loses credibility for everything
+  else on it.
+
+The report's layout and palette are the sibling project `filetrail`'s, and its
+`DESIGN.md` is the design language for both — **read it before inventing a
+second one.** The same goes for anything it already solves: its embedded
+metadata sources read PDF, OOXML, ODF, legacy OLE2 and EXIF, and were read
+before the metadata reader here was written.
+
+What is deliberately *not* shared is the identity. `filetrail` is a terminal;
+`unmasker` is the document the terminal is looking at.
 
 ## Commits
 

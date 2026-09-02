@@ -31,9 +31,9 @@ though a person could see it, followed by an all-clear - and it would arrive
 here one container over. Refusing says less and says nothing untrue.
 
 The reader that would replace this is blocked on a specimen, not on the code:
-`libreoffice-impress` is not installed on this machine, and `CLAUDE.md` is
+`libreoffice-impress` is not installed on this machine, and `CONTRIBUTING.md` is
 explicit that a detector proved only against a hand-built fixture is the shape
-of the bug that started this project. `HANDOFF.md` records it.
+of the bug that started this project.
 """
 
 

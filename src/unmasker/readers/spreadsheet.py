@@ -6,7 +6,7 @@ documents - both are a zip with a `content.xml` in it - and `unmasker` printed
 **nothing hidden found** over a workbook with a hidden column, a hidden row and
 a hidden sheet in it, having read every concealed value as ordinary visible
 prose. That is worse than not reading the file: it is the tool stating
-something the evidence does not support, which `CLAUDE.md` forbids outright.
+something the evidence does not support, which `CONTRIBUTING.md` forbids outright.
 
 So the rule this reader is built on: **a cell an application has agreed not to
 draw is not body text.** The visible cells go into the extraction, where the

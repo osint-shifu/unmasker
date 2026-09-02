@@ -25,7 +25,7 @@ ranking claims, arriving from a different direction.
 
 It does not decide that anything is an attack. A word spanning two scripts is
 reported as spanning two scripts, with `Basis.CIRCUMSTANTIAL`, and the reader
-decides. `CLAUDE.md`: never state something the evidence does not support.
+decides. `CONTRIBUTING.md`: never state something the evidence does not support.
 """
 
 from __future__ import annotations
@@ -107,7 +107,7 @@ _JOINING: tuple[tuple[int, int], ...] = (
 
 # Approximate Extended_Pictographic. `unicodedata` does not expose the property,
 # and pulling a table in for it would cost a second dependency, which
-# `HANDOFF.md` requires be argued for in writing. These ranges cover the emoji a
+# this project requires be argued for in writing. These ranges cover the emoji a
 # document realistically contains; a joiner between two of them is a sequence.
 _PICTOGRAPHIC: tuple[tuple[int, int], ...] = (
     (0x00A9, 0x00A9),

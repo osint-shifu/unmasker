@@ -72,7 +72,7 @@ W* n
 That is the page-sized clipping rectangle. `W* n` sets a clip and discards the
 path without painting it.
 
-This matters more than it looks. `HANDOFF.md` recorded `re ×1` in a sibling
+This matters more than it looks. An early census recorded `re ×1` in a sibling
 LibreOffice PDF as evidence that the operators were present — but that single
 `re` was the page clip in that file too. A detector that looks for `re` followed
 by `f` finds **zero** bars here, and a hand-built fixture written from the PDF

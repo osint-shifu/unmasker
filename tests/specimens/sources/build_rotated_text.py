@@ -24,8 +24,8 @@ overflow their cell and LibreOffice **clips** them, and `off-page-text`
 correctly reports the clipped letter as a character in the file and not on the
 page. That is true, and it is nothing to do with what this file tests - so the
 specimen is widened rather than the detector tuned. The observation is recorded
-in `HANDOFF.md`: a cell boundary clipping one glyph of ordinary visible text is
-not concealment, and no rule here currently separates the two.
+in `tests/specimens/README.md`: a cell boundary clipping one glyph of ordinary
+visible text is not concealment, and no rule here separates the two.
 
 Usage:
     python3 build_rotated_text.py OUTPUT.pdf [--workdir DIR]

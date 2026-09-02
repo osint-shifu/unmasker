@@ -1,6 +1,6 @@
 """The command line.
 
-Modes are commands, not flags - `CLAUDE.md` - so there is exactly one thing to
+Modes are commands, not flags - `CONTRIBUTING.md` - so there is exactly one thing to
 do here and no mode switch. `--json` changes the shape of the output, not what
 the tool did, which is what keeps it a flag.
 
@@ -10,10 +10,10 @@ Exit codes, and why there are three rather than two:
     1   read, searched, findings exist
     2   could not be read
 
-`HANDOFF.md` records the decision that there is no `--strict`: 1 is the CI gate
-already. But 2 has to be distinct from 0, because a file that could not be read
-is not a file that came back clean, and a pipeline that cannot tell those apart
-will eventually wave through the one document it should have stopped.
+There is deliberately no `--strict`: 1 is the CI gate already. But 2 has to be
+distinct from 0, because a file that could not be read is not a file that came
+back clean, and a pipeline that cannot tell those apart will eventually wave
+through the one document it should have stopped.
 """
 
 from __future__ import annotations
@@ -73,8 +73,8 @@ def collect(extraction, ocr: bool = False) -> list[Finding]:
         found.extend(detect_sheets(extraction.sheets))
 
     # Reading each page back costs a render and an OCR pass - seconds a page -
-    # and needs two external binaries, which is why HANDOFF.md decision 4 kept
-    # it out and why it is still off unless asked for.
+    # and needs two external binaries, which is why it was kept out
+    # of the first version and is still off unless asked for.
     if ocr and extraction.source is not None:
         for painted in extraction.drawn:
             words, problems = read_page_back(extraction.source, painted.number, painted.box)

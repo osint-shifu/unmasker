@@ -3,7 +3,7 @@
 `pypdf` owns the object model, decompression, font decoding and text
 extraction. This module owns the other half: replaying the drawing operators
 with a graphics state, so that every painted region arrives in page
-coordinates. `HANDOFF.md` argues that split; task 1 proved it is necessary.
+coordinates. Task 1 proved that split is necessary.
 
 ## What task 1 forced
 
@@ -27,7 +27,7 @@ tracked through `q`/`Q`, never matched.
 
 ## Honesty about coverage
 
-An operator this cannot read produces a remark, not silence. `CLAUDE.md`:
+An operator this cannot read produces a remark, not silence. `CONTRIBUTING.md`:
 "nothing found" must never be allowed to mean "we stopped looking", and the
 only layer that knows the interpreter gave up is the interpreter.
 """
@@ -799,8 +799,8 @@ def interpret_stream(
 def page_content(page) -> bytes:
     """The page's content stream, whether it is one stream or an array of them.
 
-    Both forms occur in files this tool will be pointed at; `HANDOFF.md`
-    records finding both in the first PDF it looked at.
+    Both forms occur in files this tool will be pointed at, and both were found
+    in the first PDF it was ever run against.
     """
     contents = _entry(page, "Contents")
     if contents is None:

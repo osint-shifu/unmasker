@@ -50,7 +50,7 @@ The path names an account, a directory structure and the client again.
 Application  LibreOffice/24.2.7.2$Linux_X86_64 LibreOffice_project/420$Build-2
 ```
 
-This is the worked example from `CLAUDE.md`, and it turned up here without
+This is the worked example from `CONTRIBUTING.md`, and it turned up here without
 being arranged. It contains a dotted quad. Pattern-matching alone reports an IP
 address; the field is called `Application`, so it is a version.
 

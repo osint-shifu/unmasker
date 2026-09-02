@@ -67,7 +67,7 @@ thirty-nine.
 
 **A value hidden twice over is reported twice.** `196000` sits in the hidden
 row *and* the hidden column, and both findings quote it. They are two answers
-to two questions, and `CLAUDE.md` forbids ranking one against the other — the
+to two questions, and `CONTRIBUTING.md` forbids ranking one against the other — the
 `filetrail` failure where the stronger claim deleted the more valuable one.
 
 **Nothing visible may be reported as hidden.** `Nowak Systemy SA` is on the

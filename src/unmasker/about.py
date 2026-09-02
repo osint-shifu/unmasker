@@ -17,7 +17,7 @@ only two rows a terminal can be relied on to give you.
 
 It is unmasker's own, and deliberately not `filetrail`'s wordmark in a
 different font. The two tools share a *design language* - `filetrail`'s
-`DESIGN.md`, which `CLAUDE.md` says to read before inventing a second one - and
+`DESIGN.md`, which `CONTRIBUTING.md` says to read before inventing a second one - and
 share the one rule that matters, that **colour encodes how the tool knows and
 never how bad the finding is**. What they do not share is an identity. A reader
 who has both installed should be able to tell in one glance which one just

@@ -43,7 +43,7 @@ hidden sheet as ordinary visible prose. An .ods is a zip with a `content.xml`
 in it, which is also the description of an .odt, so it went to the reader for
 text documents and that reader has no concept of a row nobody can see. Not a
 missing feature: the tool stated something the evidence does not support, which
-`CLAUDE.md` names as the one thing it must never do.
+`CONTRIBUTING.md` names as the one thing it must never do.
 `test_the_hidden_values_are_not_read_as_visible_text` is the guard against its
 return.
 

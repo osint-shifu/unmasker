@@ -62,7 +62,7 @@ images.
 
 ## Why the note matters more than the silence
 
-`CLAUDE.md`: **"nothing found" has two meanings.** *Searched, and it is not
+`CONTRIBUTING.md`: **"nothing found" has two meanings.** *Searched, and it is not
 there* is one. *There was nothing this tool could search* is the other, and a
 reader who cannot tell them apart has been told something the tool never
 established.

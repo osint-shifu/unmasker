@@ -37,7 +37,7 @@ classifiers = [
   "Topic :: Utilities",
 ]
 
-# One dependency, and the reasoning is in HANDOFF.md. pypdf is BSD-3-Clause,
+# One dependency, and it was checked rather than assumed. pypdf is BSD-3-Clause,
 # pure Python and has no transitive dependencies. A second one has to earn its
 # place the same way, in writing.
 dependencies = ["pypdf>=5,<7"]
