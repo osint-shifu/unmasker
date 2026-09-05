@@ -9,6 +9,29 @@ release: `unmasker.scan/1` for one file, `unmasker.survey/1` for a folder. A
 consumer should read that rather than the release number, because the release
 moves whenever anything does and the schema moves only when the shape changes.
 
+## [0.3.1] - 2026-09-05
+
+### Fixed
+
+- `invisible-text` was described as "text that the page's rendering
+  instructions do not paint". True of a PDF render mode that paints neither
+  fill nor stroke, and meaningless about a Word run marked hidden, which has
+  produced the same finding since 0.3.0. The row now names both mechanisms.
+
+  This is the second time a detector has gained a container and kept a
+  description written for the first: `revision-history` was worded for the PDF
+  Info dictionary until an XMP packet in a JPEG produced it, which is why
+  `Metadata.container` exists.
+
+  An invariant was written for it and then removed, because it did not catch
+  what it was written for: the stale wording named *no* container rather than
+  the wrong one, and a rule that a multi-container detector must not name
+  exactly one passed it. Of the four detectors emitted from more than one
+  module, only `invisible-text` has two container-specific ones; the rest pair
+  a container with a module that serves several. Whether a description is
+  *true* of every container that produces it is prose, and this one is read by
+  hand at each release rather than guarded by a test that overstates itself.
+
 ## [0.3.0] - 2026-09-05
 
 A minor version because a `.doc` is now read for its text rather than only for

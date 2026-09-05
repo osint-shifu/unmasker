@@ -166,7 +166,7 @@ Exit status is part of the interface:
 | PowerPoint / Impress | hidden slides and speaker notes |
 | JPEG | stale EXIF thumbnails that can preserve content removed by cropping, and the XMP edit history an editor left behind |
 | Metadata | undisclosed values, local filesystem paths and conflicting metadata copies |
-| Legacy Word | a `.doc`'s text, story by story - body, footnotes, headers, footers, text boxes - with its comments, tracked changes and hidden runs |
+| Legacy Word | a `.doc`'s text, story by story — body, footnotes, headers, footers, text boxes — with its comments, tracked changes and hidden runs |
 | Legacy Office | what a `.xls` or `.ppt` says about itself, out of its compound-file property streams |
 | Attachments | whole files carried inside a document, which no page mentions — and what a carried workbook hides in turn |
 | OCR comparison | text present in the file but absent from the rendered page, and the reverse |
@@ -351,7 +351,7 @@ The detector slug is stable output intended for reports and automation.
 | :--- | :--- |
 | `covered-text` | text underneath a filled shape, measured per character |
 | `text-under-image` | text underneath an image, kept distinct from a filled-shape redaction |
-| `invisible-text` | text that the page's rendering instructions do not paint |
+| `invisible-text` | text the file tells the application not to draw — a PDF render mode that paints nothing, or a Word run marked hidden |
 | `low-contrast-text` | text too close in colour to the background behind it |
 | `off-page-text` | text outside the visible page or crop box |
 | `unrendered-text` | words stored in the file that OCR cannot find on the rendered page |
@@ -467,7 +467,7 @@ unmasker tests/specimens/pdf/libreoffice-writer-image-over-text.pdf --json
 {
   "tool": "unmasker",
   "schema": "unmasker.scan/1",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "file": "tests/specimens/pdf/libreoffice-writer-image-over-text.pdf",
   "sha256": "d324105840b72c0d76c491150fe9220eabb4a87a3735afdb5de5af4c27fa0b66",
   "kind": "pdf",
