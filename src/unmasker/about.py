@@ -85,6 +85,7 @@ USAGE = (
 
 OPTIONS = (
     ("--json", "one object on stdout, for a pipeline to sort or filter"),
+    ("--html", "one self-contained page on stdout, to redirect and send"),
     ("--ocr", "render each page and read it back (needs ghostscript, tesseract)"),
     ("--width N", "wrap at N columns instead of measuring the terminal"),
     ("--version", "print the version and exit"),
@@ -95,6 +96,7 @@ EXAMPLES = (
     ("unmasker leaked.pdf", "one document, reported for a person"),
     ("unmasker ~/cases/kowalski", "a folder, surveyed: which to open next"),
     ("unmasker bids.xlsx --json", "the same, for a pipeline"),
+    ("unmasker case/ --html > r.html", "a page to attach to an email"),
     ("unmasker scan.pdf --ocr", "when the technique is unknown"),
 )
 

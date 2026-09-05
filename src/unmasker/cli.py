@@ -26,6 +26,8 @@ from pathlib import Path
 
 from . import __version__, about
 from .detect import collect
+from .html import render_file as render_html
+from .html import render_survey as render_survey_html
 from .pdf.rendered import tools_available
 from .readers import UnreadableFile, read
 from .report import Style, render
@@ -70,6 +72,15 @@ def build_parser() -> argparse.ArgumentParser:
         help="emit one JSON object on stdout for a pipeline to sort or filter",
     )
     parser.add_argument(
+        "--html",
+        action="store_true",
+        help=(
+            "emit one self-contained HTML document on stdout, to redirect into "
+            "a file somebody can be sent. Carries the full detail, loads "
+            "nothing from anywhere, and runs no script"
+        ),
+    )
+    parser.add_argument(
         "--width",
         type=int,
         default=None,
@@ -112,6 +123,8 @@ def _directory(args) -> int:
     if args.json:
         json.dump(as_json(found), sys.stdout, indent=2, ensure_ascii=False)
         sys.stdout.write("\n")
+    elif args.html:
+        sys.stdout.write(render_survey_html(found))
     else:
         sys.stdout.write(render_survey(found, _style(args.width)))
 
@@ -129,6 +142,14 @@ def main(argv: list[str] | None = None) -> int:
         # no findings to report.
         sys.stdout.write(about.render(_style(args.width)))
         return 0
+
+    if args.json and args.html:
+        # Two shapes of output down one pipe is one of them corrupted.
+        print(
+            "unmasker: --json and --html both write to stdout; choose one",
+            file=sys.stderr,
+        )
+        return 2
 
     if args.file.is_dir():
         return _directory(args)
@@ -169,6 +190,8 @@ def main(argv: list[str] | None = None) -> int:
             ensure_ascii=False,
         )
         sys.stdout.write("\n")
+    elif args.html:
+        sys.stdout.write(render_html(args.file, extraction, findings))
     else:
         sys.stdout.write(render(str(args.file), extraction, findings, _style(args.width)))
 

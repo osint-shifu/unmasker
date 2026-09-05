@@ -84,12 +84,25 @@ def test_every_option_on_the_screen_is_a_real_flag():
 
 
 def test_every_example_parses():
-    """Not merely that the flags exist - that the whole line is accepted."""
+    """Not merely that the flags exist - that the whole line is accepted.
+
+    A shell redirect is part of a correct example rather than an argument:
+    `--html` prints to stdout precisely because this tool never writes a file,
+    so the example that teaches somebody to redirect it has to show the
+    redirect. Everything from the `>` onwards belongs to the shell.
+    """
     parser = build_parser()
     for command, _ in about.EXAMPLES:
-        argv = command.split()
+        argv = command.split(">")[0].split()
         assert argv[0] == "unmasker", command
         parser.parse_args(argv[1:])
+
+
+def test_an_example_that_redirects_says_what_it_redirects_into():
+    """A `>` with nothing after it teaches a reader to type a broken line."""
+    for command, _ in about.EXAMPLES:
+        if ">" in command:
+            assert command.split(">")[1].strip(), command
 
 
 def test_the_exit_codes_are_the_ones_the_cli_returns(tmp_path, capsys):

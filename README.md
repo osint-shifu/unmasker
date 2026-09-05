@@ -83,6 +83,22 @@ could not be, which kinds of finding turned up and in how many files, and which
 files to open next. The screen triages and `--json` carries every finding, so
 there is no `--full` — the archive already exists.
 
+`--html` writes a page somebody can be sent:
+
+```bash
+unmasker ~/cases/kowalski --html > report.html
+```
+
+One file, no external anything, no JavaScript, and print rules for the day it
+goes into a case file. It carries the **full** detail rather than the survey's
+summary — a browser has search and a scrollbar where a terminal has neither.
+
+A redirect rather than an `--out` option, because this tool never writes
+anything. Everything it quotes came out of a document somebody else wrote, so
+every value on that page is escaped: a PDF whose metadata reads
+`<img src=x onerror=…>` would otherwise put a live handler into the report of
+itself.
+
 It never ranks the files. Sorting the worst documents to the top would be the
 judgement this tool leaves to its reader, so the tally counts files per kind
 and the list is in path order.
@@ -95,6 +111,7 @@ than saying something untrue.
 | | |
 | --- | --- |
 | `--json` | one object on stdout, for a pipeline that wants to sort or filter |
+| `--html` | one self-contained page on stdout — redirect it into a file and send it |
 | `--ocr` | render each page and read the picture back (see below) |
 | `--width N` | wrap at N columns instead of measuring the terminal |
 
