@@ -2,22 +2,23 @@
 
 A landing screen is the one piece of output nobody re-reads and everybody sees
 once, which is exactly the shape of a thing that goes stale without anyone
-noticing. These tests hold the two ways it can lie - by overstating what the
-tool does, and by drawing outside the width it just declared - and the one way
-it can stop being unmasker's, by losing the mark.
+noticing. These tests hold the three ways it can go wrong: by offering a flag
+or an example that does not work, by drawing wider than it should, and by
+losing the mark that makes it this tool's screen rather than any tool's.
 """
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
 
 from unmasker import about
-from unmasker.cli import main
+from unmasker.cli import build_parser, main
 from unmasker.report import Style
 from unmasker.theme import Depth
 
 SOURCE = Path(__file__).resolve().parent.parent / "src" / "unmasker"
+
+SECTIONS = ("USAGE", "OPTIONS", "EXAMPLES", "EXIT STATUS", "FORMATS")
 
 
 class _AsciiOnly:
@@ -27,8 +28,8 @@ class _AsciiOnly:
     encoding = "ascii"
 
 
-def screen(**kwargs) -> str:
-    return about.render(Style(depth=Depth.NONE, width=kwargs.pop("width", 78), **kwargs))
+def screen(width: int = 78) -> str:
+    return about.render(Style(depth=Depth.NONE, width=width))
 
 
 # --------------------------------------------------------------------------
@@ -58,71 +59,103 @@ def test_the_mark_falls_back_where_a_block_cannot_be_encoded():
 
 def test_the_screen_opens_with_the_mark():
     lines = [line for line in screen().splitlines() if line.strip()]
-    assert lines[0].strip().endswith("ker")
-    assert lines[1].strip().startswith("unmasker")
+    assert lines[0].endswith("ker")
+    assert lines[1].startswith("unmasker")
 
 
 # --------------------------------------------------------------------------
-# it must not overstate the tool
+# every command it prints has to work
+#
+# `CONTRIBUTING.md`: every command the tool prints must run in the shell that
+# printed it. A landing screen is the worst place to break that, because it is
+# the first thing anybody tries.
 # --------------------------------------------------------------------------
 
 
-def test_the_detector_count_matches_the_source():
-    """The first number a reader can check. A screen that claims more
-    detectors than exist is the tool's own front door contradicting it."""
-    slugs: set[str] = set()
-    for path in SOURCE.rglob("*.py"):
-        text = path.read_text()
-        slugs |= set(re.findall(r'detector="([a-z-]+)"', text))
-        slugs |= set(re.findall(r'^\s+"([a-z]+-[a-z]+(?:-[a-z]+)?)",$', text, re.M))
-        slugs |= set(re.findall(r'_under\(page, \([^)]*\), "([a-z-]+)"', text))
-    assert about.DETECTORS == len(slugs), (
-        f"the screen says {about.DETECTORS}, the source has {len(slugs)}"
-    )
+def test_every_option_on_the_screen_is_a_real_flag():
+    known = set()
+    for action in build_parser()._actions:
+        known.update(action.option_strings)
+
+    for name, _ in about.OPTIONS:
+        for flag in (part.strip() for part in name.split(",")):
+            flag = flag.split()[0]  # `--width N` -> `--width`
+            assert flag in known, f"the screen offers {flag}, the parser has no such flag"
 
 
-def test_every_format_it_claims_to_open_is_named_in_the_dispatch():
-    """`opens PDF · DOCX · ODT · XLSX · ODS · text` has to be true of the
-    reader, not of an intention."""
+def test_every_example_parses():
+    """Not merely that the flags exist - that the whole line is accepted."""
+    parser = build_parser()
+    for command, _ in about.EXAMPLES:
+        argv = command.split()
+        assert argv[0] == "unmasker", command
+        parser.parse_args(argv[1:])
+
+
+def test_the_exit_codes_are_the_ones_the_cli_returns(tmp_path, capsys):
+    """The screen lists three. Each one is produced here rather than trusted."""
+    listed = {code for code, _ in about.EXIT}
+    assert listed == {"0", "1", "2"}
+
+    specimens = Path(__file__).parent / "specimens" / "pdf"
+    assert main([str(specimens / "libreoffice-writer-properly-redacted.pdf")]) == 0
+    assert main([str(specimens / "libreoffice-writer-black-bars.pdf")]) == 1
+    assert main([str(tmp_path / "no-such-file")]) == 2
+    capsys.readouterr()
+
+
+def test_the_formats_it_names_are_the_ones_the_reader_dispatches_on():
     dispatch = (SOURCE / "readers" / "__init__.py").read_text()
-    claimed = dict(about.READS)["opens"]
-    assert "word/document.xml" in dispatch and "DOCX" in claimed
-    assert "xl/workbook.xml" in dispatch and "XLSX" in claimed
-    assert "content.xml" in dispatch and "ODS" in claimed
+    assert "word/document.xml" in dispatch and "DOCX" in about.FORMATS
+    assert "xl/workbook.xml" in dispatch and "XLSX" in about.FORMATS
+    assert "content.xml" in dispatch and "ODS" in about.FORMATS
 
 
 def test_it_says_presentations_are_refused():
-    """The one thing a reader is most likely to try and be surprised by."""
-    refused = dict(about.READS)["refuses"]
-    assert ".pptx" in refused and ".odp" in refused
+    """The first surprise a reader can have is pointing this at a deck."""
+    assert "refused" in about.FORMATS.lower()
     assert "NO_SLIDES" in (SOURCE / "readers" / "__init__.py").read_text()
 
 
-def test_the_exit_codes_on_the_screen_are_the_ones_the_cli_returns():
-    codes = dict(about.RUNNING)["exit status"]
-    assert "0 nothing found" in codes
-    assert "1 findings exist" in codes
-    assert "2 could not be read" in codes
-
-
 # --------------------------------------------------------------------------
-# it must not draw outside the width it declared
+# it must not sprawl
 # --------------------------------------------------------------------------
 
 
-def test_no_line_runs_past_the_rule():
-    """The rule is drawn to the declared width, and a line overshooting it is
-    the first thing a reader sees. `report.py` holds the report to this; the
-    front door is the easier place to forget."""
-    for width in (50, 62, 78, 100):
-        for line in about.render(Style(depth=Depth.NONE, width=width)).splitlines():
+def test_it_lays_out_narrow_however_wide_the_terminal_is():
+    """The report draws to the width it measured because its values wrap. A
+    help screen's content is short and fixed, so stretching it to a very wide
+    terminal leaves each description marooned from the flag it belongs to."""
+    for line in screen(width=200).splitlines():
+        assert len(line) <= about.WIDTH, f"{len(line)} > {about.WIDTH}: {line!r}"
+
+
+def test_no_line_runs_past_a_narrow_terminal():
+    for width in (40, 50, 62, 78):
+        for line in screen(width=width).splitlines():
             assert len(line) <= width, f"{len(line)} > {width}: {line!r}"
 
 
 def test_a_narrow_terminal_still_gets_every_section():
-    narrow = about.render(Style(depth=Depth.NONE, width=50))
-    for heading in ("looks at", "reads", "running it"):
+    narrow = screen(width=40)
+    for heading in SECTIONS:
         assert heading in narrow
+
+
+def test_the_sections_are_the_classic_ones_and_in_order():
+    """Flush-left capitals, in the order every modern command-line tool uses.
+    A reader who has used `gh` or `rg` should not have to learn this one."""
+    text = screen()
+    positions = [text.index(f"\n{heading}\n") for heading in SECTIONS]
+    assert positions == sorted(positions)
+
+
+def test_there_are_no_rules_or_boxes():
+    """The report has a rule under its masthead because it has sections of
+    findings to separate. A help screen has headings, and drawing a line under
+    each one is furniture."""
+    assert "─" not in screen()
+    assert "│" not in screen()
 
 
 # --------------------------------------------------------------------------
@@ -132,15 +165,25 @@ def test_a_narrow_terminal_still_gets_every_section():
 
 def test_a_bare_run_prints_the_screen_and_exits_zero(capsys):
     """Not exit 2. Nothing was read and nothing failed to be read - the tool
-    introduced itself, which is not an error and not a result."""
+    introduced itself, which is neither an error nor a result."""
     assert main([]) == 0
-    assert "unmasker" in capsys.readouterr().out
+    assert "USAGE" in capsys.readouterr().out
 
 
 def test_a_bare_run_makes_no_claim_about_any_file(capsys):
-    """A screen that shows output can be mistaken for output. This one must
-    not say it searched, found or read anything."""
+    """A screen that shows output can be mistaken for output, so this one must
+    not carry a phrase the report uses to describe a reading.
+
+    It is the report's own sentences that are forbidden, not the word
+    `searched` - the exit-status legend has every right to say what 0 means.
+    """
     main([])
     printed = capsys.readouterr().out
-    for claim in ("searched", "nothing hidden found", "findings in"):
+    for claim in (
+        "searched the text of this file",
+        "nothing hidden found",
+        "nothing to search",
+        "finding in",
+        "findings in",
+    ):
         assert claim not in printed
