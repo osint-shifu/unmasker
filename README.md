@@ -466,7 +466,7 @@ unmasker tests/specimens/pdf/libreoffice-writer-image-over-text.pdf --json
 {
   "tool": "unmasker",
   "schema": "unmasker.scan/1",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "file": "tests/specimens/pdf/libreoffice-writer-image-over-text.pdf",
   "sha256": "d324105840b72c0d76c491150fe9220eabb4a87a3735afdb5de5af4c27fa0b66",
   "kind": "pdf",
@@ -535,8 +535,8 @@ human or a downstream system can decide what they mean.
 ## How it is tested
 
 Every detector fires on a committed specimen written by a real producer,
-including LibreOffice, headless Chrome, Ghostscript, Tesseract, exiftool and
-ImageMagick. There are 39 of them and each has a provenance note describing how
+including LibreOffice, headless Chrome, Ghostscript, Tesseract, exiftool,
+ImageMagick, poppler and pypdf. There are 39 of them and each has a provenance note describing how
 it was produced, what a person sees and what is actually stored inside.
 
 This matters because real producers routinely disagree with assumptions made
@@ -551,7 +551,7 @@ drift away from the code: the detector list, the detector badge, the specimen
 count, the test count, and every example on this page - each command is run
 and its output compared to the block printed beneath it.
 
-764 tests.
+766 tests.
 
 ## Limits
 

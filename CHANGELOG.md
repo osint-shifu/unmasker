@@ -9,6 +9,31 @@ release: `unmasker.scan/1` for one file, `unmasker.survey/1` for a folder. A
 consumer should read that rather than the release number, because the release
 moves whenever anything does and the schema moves only when the shape changes.
 
+## [0.2.1] - 2026-09-05
+
+### Fixed
+
+- The landing screen still listed eight formats. `.doc`, `.xls` and `.ppt` had
+  been readable since 0.2.0 and the README said so, but the first screen a
+  reader sees did not - the tool contradicting its own front page, found by
+  auditing the prose rather than by anything failing.
+- The README credited six producers for the specimen corpus. Poppler and pypdf
+  have written specimens since, and were not named.
+
+### Added
+
+- Two invariants for the claims that had drifted, both anchored to the corpus
+  rather than to another document:
+
+  A format with specimens must be named on the landing screen. A directory of
+  specimens exists because a format is read and tested, so one the screen does
+  not mention is a claim the tool is making too quietly.
+
+  Every specimen must have a provenance note. The README says each does; a
+  specimen without one is a file whose producer and contents are known to
+  whoever added it and to nobody else, which makes it a fixture, and fixtures
+  are what this corpus exists instead of.
+
 ## [0.2.0] - 2026-09-05
 
 A minor version because a whole family of file formats is readable that was
@@ -366,6 +391,7 @@ First release.
   out of the entropy-coded data, reporting a picture the size of noise. It now
   stops at `SOS`/`EOI` the way `_segments()` already did.
 
+[0.2.1]: https://github.com/osint-shifu/unmasker/releases/tag/v0.2.1
 [0.2.0]: https://github.com/osint-shifu/unmasker/releases/tag/v0.2.0
 [0.1.12]: https://github.com/osint-shifu/unmasker/releases/tag/v0.1.12
 [0.1.11]: https://github.com/osint-shifu/unmasker/releases/tag/v0.1.11

@@ -214,3 +214,18 @@ def test_the_test_count_is_the_number_of_tests(request):
 
     assert claimed, "README no longer states how many tests there are"
     assert int(claimed.group(1)) == request.session.testscollected
+
+
+def test_every_specimen_says_where_it_came_from():
+    """The README says each specimen has a provenance note. It has to be true.
+
+    A specimen without one is a file whose producer, visible content and stored
+    content are known to whoever added it and to nobody else - which makes it a
+    fixture, and fixtures are what this corpus exists instead of.
+    """
+    missing = sorted(
+        str(path.relative_to(SPECIMENS))
+        for path in _specimen_files()
+        if not path.with_suffix(".md").exists()
+    )
+    assert not missing, f"specimens with no provenance note: {missing}"

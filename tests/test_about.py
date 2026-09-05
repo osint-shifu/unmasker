@@ -204,3 +204,37 @@ def test_a_bare_run_makes_no_claim_about_any_file(capsys):
         "findings in",
     ):
         assert claim not in printed
+
+
+def test_the_landing_screen_names_every_format_the_corpus_holds():
+    """The screen a reader sees first, against what the tool is tested on.
+
+    `FORMATS` went stale the moment compound files were added: the reader
+    dispatched `.doc`, the README said so, and the tool's own front page still
+    listed eight formats. Nothing tied the two, so nothing failed.
+
+    The corpus is the honest anchor. A directory of specimens exists because a
+    format is read and tested, so a format with specimens and no place on the
+    screen is a claim the tool is making too quietly.
+    """
+    from pathlib import Path
+
+    from unmasker.about import FORMATS
+
+    corpus = Path(__file__).parent / "specimens"
+    folders = {
+        path.name
+        for path in corpus.iterdir()
+        if path.is_dir() and path.name != "sources"
+    }
+    # `odf` holds the OpenDocument flavours the screen names one by one.
+    folders.discard("odf")
+
+    # Word membership rather than exact tokens: how the screen phrases the
+    # list is its business, and a test that dictates the punctuation would be
+    # changed to suit itself the first time the wording moved.
+    import re
+
+    words = set(re.findall(r"[a-z0-9]+", FORMATS.lower()))
+    missing = sorted(folder for folder in folders if folder not in words)
+    assert not missing, f"specimens exist for {missing}, which the screen does not name"
