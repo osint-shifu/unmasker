@@ -86,6 +86,7 @@ USAGE = (
 OPTIONS = (
     ("--json", "one object on stdout, for a pipeline to sort or filter"),
     ("--html", "one self-contained page on stdout, to redirect and send"),
+    ("--md", "Markdown on stdout, for a wiki, a ticket or a pull request"),
     ("--ocr", "render each page and read it back (needs ghostscript, tesseract)"),
     ("--width N", "wrap at N columns instead of measuring the terminal"),
     ("--version", "print the version and exit"),

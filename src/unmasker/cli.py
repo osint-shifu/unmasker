@@ -28,6 +28,8 @@ from . import __version__, about
 from .detect import collect
 from .html import render_file as render_html
 from .html import render_survey as render_survey_html
+from .markdown import render_file as render_md
+from .markdown import render_survey as render_survey_md
 from .pdf.rendered import tools_available
 from .readers import UnreadableFile, read
 from .report import Style, render
@@ -70,6 +72,15 @@ def build_parser() -> argparse.ArgumentParser:
         "--json",
         action="store_true",
         help="emit one JSON object on stdout for a pipeline to sort or filter",
+    )
+    parser.add_argument(
+        "--md",
+        action="store_true",
+        help=(
+            "emit Markdown on stdout, for a wiki, a ticket or a pull request. "
+            "Every value is fenced or escaped, because a Markdown renderer "
+            "passes raw HTML straight through"
+        ),
     )
     parser.add_argument(
         "--html",
@@ -125,6 +136,8 @@ def _directory(args) -> int:
         sys.stdout.write("\n")
     elif args.html:
         sys.stdout.write(render_survey_html(found))
+    elif args.md:
+        sys.stdout.write(render_survey_md(found))
     else:
         sys.stdout.write(render_survey(found, _style(args.width)))
 
@@ -143,10 +156,12 @@ def main(argv: list[str] | None = None) -> int:
         sys.stdout.write(about.render(_style(args.width)))
         return 0
 
-    if args.json and args.html:
+    chosen = [name for name in ("json", "html", "md") if getattr(args, name)]
+    if len(chosen) > 1:
         # Two shapes of output down one pipe is one of them corrupted.
         print(
-            "unmasker: --json and --html both write to stdout; choose one",
+            "unmasker: " + " and ".join(f"--{name}" for name in chosen)
+            + " all write to stdout; choose one",
             file=sys.stderr,
         )
         return 2
@@ -192,6 +207,8 @@ def main(argv: list[str] | None = None) -> int:
         sys.stdout.write("\n")
     elif args.html:
         sys.stdout.write(render_html(args.file, extraction, findings))
+    elif args.md:
+        sys.stdout.write(render_md(args.file, extraction, findings))
     else:
         sys.stdout.write(render(str(args.file), extraction, findings, _style(args.width)))
 

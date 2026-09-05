@@ -254,8 +254,7 @@ def render_survey(survey: Survey) -> str:
         f'<header>{_mark()}'
         f'<div class="subject">{escape(str(survey.root))}</div>'
         f'<div class="tally">'
-        f"{escape(_plural(len(hiding), 'file'))} of "
-        f"{escape(_plural(len(survey.results), 'file'))} hide something"
+        f"{len(hiding)} of {escape(_plural(len(survey.results), 'file'))} hide something"
         "</div></header>"
     ]
 

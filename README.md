@@ -99,6 +99,13 @@ every value on that page is escaped: a PDF whose metadata reads
 `<img src=x onerror=…>` would otherwise put a live handler into the report of
 itself.
 
+`--md` is the same report for somewhere that already speaks Markdown. It is
+the **more** dangerous of the two to get wrong, not the safer: an HTML renderer
+handed `<script>` prints it, and a Markdown renderer runs it, because passing
+raw HTML through is what Markdown does. So quoted evidence goes in a fenced
+block — with a fence grown longer than any run of backticks inside it — prose
+is escaped, and a `|` never reaches a table cell unescaped.
+
 It never ranks the files. Sorting the worst documents to the top would be the
 judgement this tool leaves to its reader, so the tally counts files per kind
 and the list is in path order.
@@ -112,6 +119,7 @@ than saying something untrue.
 | --- | --- |
 | `--json` | one object on stdout, for a pipeline that wants to sort or filter |
 | `--html` | one self-contained page on stdout — redirect it into a file and send it |
+| `--md` | Markdown on stdout, for a wiki, a ticket or a pull request |
 | `--ocr` | render each page and read the picture back (see below) |
 | `--width N` | wrap at N columns instead of measuring the terminal |
 
