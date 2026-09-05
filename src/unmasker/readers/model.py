@@ -55,6 +55,35 @@ class Attachment:
     """Where in the container it was found, named the way the format names it:
     `/Names/EmbeddedFiles` in a PDF, an archive member elsewhere."""
 
+    description: str = ""
+    """What the bytes are, for an attachment that is not text.
+
+    "Nothing" is the wrong answer for a file that is plainly there, and it is
+    the answer an empty column gives. A reader who cannot be shown the content
+    can still be told what kind of thing is sitting in the document."""
+
+
+SIGNATURES = (
+    (b"PK\x03\x04", "a zip archive"),
+    (b"%PDF-", "a PDF"),
+    (b"\xff\xd8\xff", "a JPEG"),
+    (b"\x89PNG\r\n", "a PNG"),
+    (b"\xd0\xcf\x11\xe0", "a legacy OLE2 compound file"),
+    (b"{\\rtf", "an RTF document"),
+)
+
+
+def describe_bytes(head: bytes) -> str:
+    """What the first bytes say this is. Content, not extension.
+
+    The same rule the reader dispatch follows: a name is what somebody called
+    the file, and a forensic tool has no business trusting it.
+    """
+    for signature, name in SIGNATURES:
+        if head.startswith(signature):
+            return name
+    return "bytes in no format this tool recognises"
+
 
 @dataclass(frozen=True)
 class Extraction:

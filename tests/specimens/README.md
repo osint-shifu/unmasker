@@ -51,6 +51,8 @@ which RFC 2606 reserves for the purpose.
 | [`jpeg/exiftool-xmp-history.jpg`](jpeg/exiftool-xmp-history.md) | ImageMagick, exiftool 12.x | a flat panel with one word on it | an XMP edit history naming an application, two timestamps and the document it was derived from |
 | [`jpeg/exiftool-xmp-absent.jpg`](jpeg/exiftool-xmp-absent.md) | ImageMagick | the same panel | nothing, and no packet to read — control |
 | [`pdf/poppler-pdf-with-an-attachment.pdf`](pdf/poppler-pdf-with-an-attachment.md) | LibreOffice 24.2, poppler `pdfattach` | a decision notice naming no figure | a text file in `/Names/EmbeddedFiles` giving the reserve price |
+| [`docx/libreoffice-writer-embedded-sheet.docx`](docx/libreoffice-writer-embedded-sheet.md) | LibreOffice 24.2 Writer | a summary with a small table pictured in it | the whole workbook behind the picture, as `word/embeddings/oleObject1.xlsx` |
+| [`odt/libreoffice-writer-embedded-sheet.odt`](odt/libreoffice-writer-embedded-sheet.md) | LibreOffice 24.2 Writer | the same summary | the same workbook, as the sub-package `Object 1/` |
 
 Every specimen that hides text *on the page* is also found by `--ocr`, which
 renders the page and reads the picture back and knows none of the mechanisms —

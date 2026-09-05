@@ -16,7 +16,7 @@ from ..metadata import read_pdf as read_pdf_metadata
 from ..metadata.detectors import describe
 from ..pdf.detectors import remarks as page_remarks
 from ..pdf.interpreter import InterpretedPage, interpret_page
-from .model import Attachment, Extraction, TextUnit, UnreadableFile
+from .model import Attachment, Extraction, TextUnit, UnreadableFile, describe_bytes
 
 
 def _has_fonts(page) -> bool:
@@ -142,6 +142,7 @@ def _attachments(reader, remarks: list[str]) -> tuple:
                     size=len(data),
                     text=_as_text(data),
                     part="/Names/EmbeddedFiles",
+                    description=describe_bytes(data[:8]),
                 )
             )
     return tuple(found)

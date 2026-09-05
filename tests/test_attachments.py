@@ -50,3 +50,36 @@ def test_the_page_that_carries_it_says_none_of_it():
 def test_a_pdf_with_no_attachment_is_not_reported():
     """The control. A detector that fires on every PDF is worse than none."""
     assert _findings(BARE, "attached-file") == []
+
+
+# The office families say something different. An embedded object *is* on the
+# page - what is on the page is a picture of it, written beside it for that
+# purpose - while the package carries the file the picture was made from.
+
+DOCX = Path(__file__).parent / "specimens" / "docx" / "libreoffice-writer-embedded-sheet.docx"
+ODT = Path(__file__).parent / "specimens" / "odt" / "libreoffice-writer-embedded-sheet.odt"
+PLAIN_DOCX = Path(__file__).parent / "specimens" / "docx" / "libreoffice-writer-metadata-leak.docx"
+
+
+def test_a_word_document_carrying_a_workbook_reports_it():
+    (found,) = _findings(DOCX, "attached-file")
+    assert "oleObject1.xlsx" in found.summary
+    assert found.basis is Basis.DIRECT
+
+
+def test_the_summary_does_not_claim_an_embedded_object_is_off_the_page():
+    """It is on the page. The picture is; the workbook behind it travels too,
+    and saying otherwise would be the tool overstating its own finding."""
+    (found,) = _findings(DOCX, "attached-file")
+    assert "on no page" not in found.summary
+    assert "rendering" in found.summary
+
+
+def test_an_opendocument_embedded_object_is_reported_as_one_thing():
+    """`Object 1/` is a sub-package of several members, and it is one object."""
+    (found,) = _findings(ODT, "attached-file")
+    assert "Object 1" in found.summary
+
+
+def test_a_document_with_no_embedded_object_is_not_reported():
+    assert _findings(PLAIN_DOCX, "attached-file") == []

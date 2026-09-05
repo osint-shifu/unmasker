@@ -286,13 +286,14 @@ unmasker tests/specimens/docx
 ```
 
 ```text
-  unmasker  tests/specimens/docx                              3 of 6 files
+  unmasker  tests/specimens/docx                              4 of 8 files
   ────────────────────────────────────────────────────────────────────────
-    read      6 files, 15 findings
+    read      8 files, 16 findings
     not read  0 files
 
-  what was found                                                   9 kinds
+  what was found                                                  10 kinds
   ────────────────────────────────────────────────────────────────────────
+    attached-file         1 file
     zero-width            1 file
     bidi-control          1 file
     tag-characters        1 file
@@ -303,8 +304,9 @@ unmasker tests/specimens/docx
     comment               1 file
     revision-history      1 file
 
-  files that hide something                                        3 files
+  files that hide something                                        4 files
   ────────────────────────────────────────────────────────────────────────
+    libreoffice-writer-embedded-sheet.docx     attached-file
     libreoffice-writer-hidden-characters.docx  zero-width, bidi-control,
                                                tag-characters,
                                                mixed-script
@@ -314,7 +316,7 @@ unmasker tests/specimens/docx
                                                revision-history
 
   ────────────────────────────────────────────────────────────────────────
-  searched 6 files. unmasker <file> for the detail, --json for all of it.
+  searched 8 files. unmasker <file> for the detail, --json for all of it.
 ```
 
 A directory scan reports what was read, what could not be read, which detector
@@ -459,7 +461,7 @@ unmasker tests/specimens/pdf/libreoffice-writer-image-over-text.pdf --json
 {
   "tool": "unmasker",
   "schema": "unmasker.scan/1",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "file": "tests/specimens/pdf/libreoffice-writer-image-over-text.pdf",
   "sha256": "d324105840b72c0d76c491150fe9220eabb4a87a3735afdb5de5af4c27fa0b66",
   "kind": "pdf",
@@ -529,7 +531,7 @@ human or a downstream system can decide what they mean.
 
 Every detector fires on a committed specimen written by a real producer,
 including LibreOffice, headless Chrome, Ghostscript, Tesseract, exiftool and
-ImageMagick. There are 35 of them and each has a provenance note describing how
+ImageMagick. There are 37 of them and each has a provenance note describing how
 it was produced, what a person sees and what is actually stored inside.
 
 This matters because real producers routinely disagree with assumptions made
@@ -544,7 +546,7 @@ drift away from the code: the detector list, the detector badge, the specimen
 count, the test count, and every example on this page - each command is run
 and its output compared to the block printed beneath it.
 
-734 tests.
+738 tests.
 
 ## Limits
 

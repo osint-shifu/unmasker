@@ -9,6 +9,36 @@ release: `unmasker.scan/1` for one file, `unmasker.survey/1` for a folder. A
 consumer should read that rather than the release number, because the release
 moves whenever anything does and the schema moves only when the shape changes.
 
+## [0.1.8] - 2026-09-05
+
+### Added
+
+- `attached-file` now reads office packages as well as PDFs: OOXML objects
+  under `*/embeddings/`, and OpenDocument's `Object N/` sub-packages, which are
+  gathered into one finding each rather than reported a member at a time.
+- Two specimens, both LibreOffice Writer: a summary paragraph disclosing no
+  figures, with the workbook behind the pictured table carried in the package.
+
+### Changed
+
+- The finding says something different for an embedded object than for a PDF
+  attachment, because the two are not the same claim. An attachment is on no
+  page. An embedded object *is* on the page - what is on the page is a
+  rendering of it - and reporting that as hidden would overstate it.
+- Where the content is not text, the report says what the bytes are rather than
+  leaving the column empty. "Nothing in the file" was printed beside a sentence
+  saying the document carried 5454 bytes, which is the tool contradicting
+  itself inside one finding. The kind is read from the first bytes, not from
+  the name.
+- A finding no longer names the same location twice. `"Object 1/" in Object 1/`
+  teaches a reader that the second half of a sentence carries nothing.
+
+### Known gaps
+
+- What an embedded workbook holds is not read. A spreadsheet inside a document
+  can carry hidden sheets and filtered rows exactly as one on disk can, and
+  nothing descends into it yet.
+
 ## [0.1.7] - 2026-09-05
 
 ### Added
@@ -183,6 +213,7 @@ First release.
   out of the entropy-coded data, reporting a picture the size of noise. It now
   stops at `SOS`/`EOI` the way `_segments()` already did.
 
+[0.1.8]: https://github.com/osint-shifu/unmasker/releases/tag/v0.1.8
 [0.1.7]: https://github.com/osint-shifu/unmasker/releases/tag/v0.1.7
 [0.1.6]: https://github.com/osint-shifu/unmasker/releases/tag/v0.1.6
 [0.1.5]: https://github.com/osint-shifu/unmasker/releases/tag/v0.1.5

@@ -28,7 +28,14 @@ def _size(count: int) -> str:
 def detect_attachments(attachments: tuple) -> list[Finding]:
     findings = []
     for carried in attachments:
-        where = f" in {carried.part}" if carried.part else ""
+        # Naming the same string twice - `"Object 1/" in Object 1/` - teaches a
+        # reader that the second half of a sentence carries nothing.
+        where = (
+            f" in {carried.part}"
+            if carried.part and carried.part.rstrip("/") != carried.name.rstrip("/")
+            else ""
+        )
+        attached = carried.part.startswith("/Names")
         quoted = carried.text
         findings.append(
             Finding(
@@ -36,16 +43,24 @@ def detect_attachments(attachments: tuple) -> list[Finding]:
                 basis=Basis.DIRECT,
                 summary=(
                     f'this document carries a file called "{carried.name}"'
-                    f"{where}, {_size(carried.size)} of it, which is on no page "
-                    "and does not print with the document"
+                    f"{where}, {_size(carried.size)} of it, "
                     + (
-                        ""
-                        if quoted is not None
-                        else ". Its bytes are not text, so nothing is quoted here"
+                        "which is on no page and does not print with the document"
+                        if attached
+                        # An embedded object is on the page. The picture of it
+                        # is; saying otherwise would overstate the finding.
+                        else "of which the page shows a rendering rather than "
+                        "the file itself"
                     )
                 ),
-                human_sees="",
-                machine_reads=quoted if quoted is not None else "",
+                # An attachment is on no page; an embedded object is, as a
+                # picture. Saying "nothing on the page" about the second would
+                # contradict the sentence above it.
+                human_sees="" if attached else "a rendering of it",
+                # "Nothing in the file" is the wrong answer about a file that
+                # is plainly there. Where the content cannot be shown, what it
+                # is can be.
+                machine_reads=quoted if quoted is not None else carried.description,
                 location=Location(),
             )
         )

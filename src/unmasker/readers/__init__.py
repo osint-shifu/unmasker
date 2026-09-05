@@ -38,6 +38,63 @@ def _digest(path: Path) -> str:
         return ""
 
 
+def _embedded(path: Path) -> tuple:
+    """Whole files an office package carries as members.
+
+    Both families do this and neither hides it: an embedded object is *on* the
+    page. What is on the page is a picture of it - LibreOffice writes an EMF
+    beside the object for exactly that purpose - and the file the picture was
+    made from travels with the document. That is the finding, and it is a
+    different one from a PDF attachment.
+
+    OOXML keeps each object as one member under `*/embeddings/`. OpenDocument
+    keeps it as a sub-package, `Object 1/` and everything beneath, so those are
+    gathered into one record rather than reported a member at a time.
+    `ObjectReplacements/` is skipped: that is the picture, not the object.
+    """
+    import zipfile
+
+    from .model import Attachment, describe_bytes
+
+    found = []
+    packages: dict[str, list[int]] = {}
+    try:
+        with zipfile.ZipFile(path) as archive:
+            for entry in archive.infolist():
+                parts = entry.filename.split("/")
+                if len(parts) > 2 and parts[1] == "embeddings" and parts[-1]:
+                    with archive.open(entry) as handle:
+                        head = handle.read(8)
+                    found.append(
+                        Attachment(
+                            name=parts[-1],
+                            size=entry.file_size,
+                            part=entry.filename,
+                            description=describe_bytes(head),
+                        )
+                    )
+                elif parts[0].startswith("Object ") and len(parts) > 1 and parts[-1]:
+                    seen = packages.setdefault(parts[0], [0, 0])
+                    seen[0] += entry.file_size
+                    seen[1] += 1
+    except (OSError, zipfile.BadZipFile):
+        return ()
+
+    for package, (size, count) in packages.items():
+        found.append(
+            Attachment(
+                name=f"{package}/",
+                size=size,
+                part=f"{package}/",
+                # A sub-package has no first bytes of its own; what it is, is
+                # the thing it is made of.
+                description=f"a sub-package of {count} members, itself a document",
+            )
+        )
+
+    return tuple(found)
+
+
 def read(path: str | Path) -> Extraction:
     """Read `path` into text units, or raise `UnreadableFile`."""
     path = Path(path)
@@ -48,7 +105,14 @@ def read(path: str | Path) -> Extraction:
 
     # Attached once here rather than in each reader, so a format added later
     # cannot arrive without it.
-    return dataclasses.replace(_dispatch(path, head), sha256=_digest(path))
+    extraction = dataclasses.replace(_dispatch(path, head), sha256=_digest(path))
+
+    # The PDF reader fills these itself, because the name tree is pypdf's to
+    # walk. Every zip container is read the same way here for the same reason
+    # the digest is.
+    if not extraction.attachments and head.startswith(b"PK\x03\x04"):
+        extraction = dataclasses.replace(extraction, attachments=_embedded(path))
+    return extraction
 
 
 def _dispatch(path: Path, head: bytes) -> Extraction:
