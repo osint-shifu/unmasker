@@ -440,6 +440,22 @@ def test_an_exact_colour_match_is_direct_and_a_near_one_is_circumstantial():
     assert near.basis is Basis.CIRCUMSTANTIAL
 
 
+def test_a_line_half_over_an_image_reports_the_half_that_could_be_measured():
+    """An image hides what is behind it from the measurement, not from the run.
+
+    `_background` returns None over an image, because "we cannot tell" and "it
+    is white" are different answers. Those glyphs cannot be flagged, so the
+    span begins after them - and the detector reads its colours from the span
+    rather than from the start of the line, which is the whole reason it can
+    do without a guard that would otherwise have to drop the span in silence.
+    """
+    (found,) = low_contrast_text(
+        page(image(95, 190, 132, 220, order=0), run("ABCDEF", order=1, fill=WHITE))
+    )
+    assert found.machine_reads == "DEF"
+    assert found.basis is Basis.DIRECT
+
+
 def test_a_background_whose_colour_is_unreadable_is_not_assumed_to_be_paper():
     """ "We cannot tell what is behind this" and "it is white" are different
     answers, and only one of them is true. A pattern fill gives the first."""

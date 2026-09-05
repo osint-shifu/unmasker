@@ -732,24 +732,30 @@ def low_contrast_text(page: InterpretedPage) -> list[Finding]:
         runs = [run for _, run in line]
         inks = [_ink(run) for run in runs]
         behind = [_background(page, g, run) for g, run in line]
-        gaps = [
+        # The difference is carried with the two colours it was measured
+        # between. A glyph whose background is unreadable measures nothing, and
+        # `flags` is false there, so a span never contains one - which is what
+        # lets the loop below read all three values without a guard.
+        #
+        # The guard is worth not having. It could only choose between stopping
+        # the scan and dropping the span without saying so, and a finding that
+        # disappears in silence is the one failure this report has no way to
+        # show. Written this way there is nothing to drop.
+        measured: list[tuple[float, Colour, Colour] | None] = [
             None
             if b is None or ink is None
-            else max(abs(x - y) for x, y in zip(ink.rgb, b.rgb, strict=True))
+            else (max(abs(x - y) for x, y in zip(ink.rgb, b.rgb, strict=True)), ink, b)
             for ink, b in zip(inks, behind, strict=True)
         ]
-        flags = [g is not None and g <= CONTRAST for g in gaps]
+        flags = [m is not None and m[0] <= CONTRAST for m in measured]
 
         for start, stop in _spans(glyphs, flags):
             text = "".join(g.char for g in glyphs[start:stop])
             if not text.strip():
                 continue
-            measured = [gap for gap in gaps[start:stop] if gap is not None]
-            paper = behind[start]
-            ink = inks[start]
-            if not measured or paper is None or ink is None:
-                continue  # _spans() only yields where all three were present
-            worst = max(measured)
+            span = [m for m in measured[start:stop] if m is not None]
+            worst = max(gap for gap, _, _ in span)
+            _, ink, paper = span[0]
             run = runs[start]
             findings.append(
                 Finding(

@@ -9,6 +9,30 @@ release: `unmasker.scan/1` for one file, `unmasker.survey/1` for a folder. A
 consumer should read that rather than the release number, because the release
 moves whenever anything does and the schema moves only when the shape changes.
 
+## [0.1.4] - 2026-09-05
+
+### Changed
+
+- `low_contrast_text` no longer carries a guard that could drop a span without
+  saying so. Narrowing the optional colours for the type checker had left a
+  branch that skipped a span when a measurement was missing, and while that
+  branch was unreachable - `flags` is only true where a measurement exists,
+  and a span is nothing but a run of true flags - the wrong half of it was
+  chosen. The code it replaced would have raised; this went quiet, and a
+  finding that disappears without a trace is precisely the confusion between
+  *searched and not there* and *there was nothing to search* that the rest of
+  the tool works to prevent.
+
+  The difference is now carried together with the two colours it was measured
+  between, so the span reads all three without a guard and there is nothing
+  left to drop. No output changes: the branch never ran.
+
+### Added
+
+- A specimen-free test for a line half-covered by an image, where the
+  background is unreadable for some glyphs and known for the rest. It pins the
+  invariant the detector now depends on structurally.
+
 ## [0.1.3] - 2026-09-05
 
 ### Fixed
@@ -105,6 +129,7 @@ First release.
   out of the entropy-coded data, reporting a picture the size of noise. It now
   stops at `SOS`/`EOI` the way `_segments()` already did.
 
+[0.1.4]: https://github.com/osint-shifu/unmasker/releases/tag/v0.1.4
 [0.1.3]: https://github.com/osint-shifu/unmasker/releases/tag/v0.1.3
 [0.1.2]: https://github.com/osint-shifu/unmasker/releases/tag/v0.1.2
 [0.1.1]: https://github.com/osint-shifu/unmasker/releases/tag/v0.1.1

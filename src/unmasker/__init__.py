@@ -1,6 +1,6 @@
 """What a human sees in a document, against what a machine reads out of it."""
 
-__version__ = "0.1.3"
+__version__ = "0.1.4"
 
 #: The shape of `--json`, which is not the same question as the build that
 #: wrote it. `version` moves at every release and tells a consumer nothing
