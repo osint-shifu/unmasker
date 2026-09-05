@@ -29,6 +29,8 @@ from .detect import collect
 from .pdf.rendered import tools_available
 from .readers import UnreadableFile, read
 from .report import Style, render
+from .scan import survey
+from .survey_report import as_json, render_survey
 from .theme import glyphs, resolve_depth
 
 
@@ -57,7 +59,9 @@ def build_parser() -> argparse.ArgumentParser:
     # Optional, so a bare `unmasker` can introduce itself instead of printing
     # `error: the following arguments are required`, which tells a reader they
     # were wrong and nothing else.
-    parser.add_argument("file", type=Path, nargs="?", help="the document to read")
+    parser.add_argument(
+        "file", type=Path, nargs="?", help="the document to read, or a folder of them"
+    )
     # A description that restates its flag teaches the reader to skip
     # descriptions, and once they skip one they skip the rest.
     parser.add_argument(
@@ -86,6 +90,36 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _directory(args) -> int:
+    """A folder of documents, surveyed rather than reported one at a time.
+
+    The exit code says the same three things it says about a file, one level
+    up. 2 is reserved for *nothing here could be read*, because a pipeline
+    handed a folder of unreadable files must not be told it came back clean.
+    """
+    if args.ocr:
+        # Seconds a page across a case folder is hours. Saying so beats
+        # starting and leaving somebody to wonder whether it hung.
+        print(
+            "unmasker: --ocr is a page at a time and costs seconds a page; "
+            "it is refused on a directory. Run it on the file you want.",
+            file=sys.stderr,
+        )
+        return 2
+
+    found = survey(args.file)
+
+    if args.json:
+        json.dump(as_json(found), sys.stdout, indent=2, ensure_ascii=False)
+        sys.stdout.write("\n")
+    else:
+        sys.stdout.write(render_survey(found, _style(args.width)))
+
+    if found.results and not found.read:
+        return 2
+    return 1 if found.hiding else 0
+
+
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
 
@@ -95,6 +129,9 @@ def main(argv: list[str] | None = None) -> int:
         # no findings to report.
         sys.stdout.write(about.render(_style(args.width)))
         return 0
+
+    if args.file.is_dir():
+        return _directory(args)
 
     try:
         extraction = read(args.file)

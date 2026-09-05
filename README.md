@@ -78,6 +78,15 @@ assumed, and any second one has to earn its place the same way — in writing.
 Reads PDF, DOCX, ODT, XLSX, ODS and any text file. Local, read-only, no
 network, and it never writes to the file it is given.
 
+Point it at a **folder** and it surveys the lot: how much was read, how much
+could not be, which kinds of finding turned up and in how many files, and which
+files to open next. The screen triages and `--json` carries every finding, so
+there is no `--full` — the archive already exists.
+
+It never ranks the files. Sorting the worst documents to the top would be the
+judgement this tool leaves to its reader, so the tally counts files per kind
+and the list is in path order.
+
 Presentations — `.pptx` and `.odp` — are **refused**, with a message saying so.
 Reading a deck as a text document would report a hidden slide and a speaker
 note as visible text and then call the file clean, and saying less is better

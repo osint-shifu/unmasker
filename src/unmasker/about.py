@@ -78,7 +78,10 @@ WIDTH = 78
 
 INDENT = "  "
 
-USAGE = ("unmasker <file> [options]",)
+USAGE = (
+    "unmasker <file> [options]",
+    "unmasker <folder> [options]",
+)
 
 OPTIONS = (
     ("--json", "one object on stdout, for a pipeline to sort or filter"),
@@ -89,7 +92,8 @@ OPTIONS = (
 )
 
 EXAMPLES = (
-    ("unmasker leaked.pdf", "a document, reported for a person"),
+    ("unmasker leaked.pdf", "one document, reported for a person"),
+    ("unmasker ~/cases/kowalski", "a folder, surveyed: which to open next"),
     ("unmasker bids.xlsx --json", "the same, for a pipeline"),
     ("unmasker scan.pdf --ocr", "when the technique is unknown"),
 )
