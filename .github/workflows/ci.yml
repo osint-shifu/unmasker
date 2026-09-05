@@ -24,6 +24,15 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install
         run: python -m pip install -e ".[dev]"
+      # One test shells out to poppler, and it is the one that proves this tool
+      # says something the obvious answer does not: `pdftotext` reports no
+      # annotations, so a comment carrying "Do not minute this" is invisible to
+      # the first thing anybody reaches for. It skips where poppler is absent,
+      # so installing it on one platform is the difference between that claim
+      # being checked somewhere and checked nowhere.
+      - name: Poppler (for the one test that needs it)
+        if: matrix.os == 'ubuntu-latest'
+        run: sudo apt-get update && sudo apt-get install -y poppler-utils
       # `ruff check`, not `ruff format --check`. This project lints and does
       # not auto-format: the layout of the report, the specimens' XML and the
       # docstrings are placed deliberately, and a formatter run at publication
@@ -32,8 +41,10 @@ jobs:
       - name: Ruff
         run: ruff check .
       # The specimens are the test suite here and they are committed, so this
-      # runs the real thing on every platform. Nothing renders or shells out:
-      # `--ocr` needs ghostscript and tesseract and is not exercised in CI,
-      # which `tests/test_ocr.py` skips for rather than failing over.
+      # runs the real thing on every platform. `--ocr` is not exercised: it
+      # needs ghostscript and tesseract, and `tests/test_ocr.py` skips rather
+      # than failing over their absence. Every test that shells out is guarded
+      # the same way - the first CI run failed because one of them was not, and
+      # nothing on this machine could have told us.
       - name: Tests
         run: pytest

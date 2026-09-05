@@ -14,6 +14,9 @@ content-stream work would ever have found it.
 parser gets - which is the only thing this tool has to say about anything.
 """
 
+import shutil
+import subprocess
+
 import pytest
 from conftest import SPECIMENS, page_of
 from pypdf import PdfReader
@@ -149,10 +152,19 @@ def test_an_empty_comment_is_not_a_finding():
 # --------------------------------------------------------------------------
 
 
+@pytest.mark.skipif(
+    not shutil.which("pdftotext"),
+    reason="poppler's pdftotext is not installed",
+)
 def test_pdftotext_does_not_report_these_and_unmasker_does():
-    """The whole point. A reader checking the obvious way finds nothing."""
-    import subprocess
+    """The whole point. A reader checking the obvious way finds nothing.
 
+    The only test here that shells out, and it earns it: poppler is the tool
+    somebody reaches for first, so this is the claim that annotations are a
+    blind spot in the obvious answer rather than in a straw man. It is skipped
+    where poppler is absent, like the OCR tests, and CI installs poppler on one
+    platform so the claim is checked somewhere rather than nowhere.
+    """
     path = SPECIMENS / "pdf" / SPECIMEN
     extracted = subprocess.run(
         ["pdftotext", str(path), "-"], capture_output=True, text=True, timeout=60
