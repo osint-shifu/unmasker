@@ -488,6 +488,10 @@ class _Interpreter:
             nums = _numbers(operands)
             floats = [v for v in operands if isinstance(v, float)]
 
+            # Past the guard below, an operator with an arity requirement has
+            # at least that many numbers. That is a runtime fact the type
+            # checker cannot carry, so the arithmetic further down reads a
+            # non-optional view rather than re-testing what was just tested.
             need = ARITY.get(op)
             if need is not None and (nums is None or len(nums) < need):
                 self.note(
@@ -496,6 +500,7 @@ class _Interpreter:
                 )
                 operands = []
                 continue
+            numbers: list[float] = nums or []
 
             # -- graphics state ---------------------------------------
             if op == "q":
@@ -506,7 +511,7 @@ class _Interpreter:
                 else:
                     self.note("a Q with no matching q; the state stack was already empty")
             elif op == "cm":
-                state.ctm = Matrix(*nums[-6:]).then(state.ctm)
+                state.ctm = Matrix(*numbers[-6:]).then(state.ctm)
             elif op == "gs":
                 self._apply_extgstate(state, operands, resources)
 
@@ -529,26 +534,26 @@ class _Interpreter:
 
             # -- path construction -------------------------------------
             elif op == "m":
-                subpath_start = point(*nums[-2:])
+                subpath_start = point(*numbers[-2:])
                 path.append(subpath_start)
             elif op == "l":
-                path.append(point(*nums[-2:]))
+                path.append(point(*numbers[-2:]))
             elif op == "c":
                 # Control points are included, which overstates the curve's
                 # extent. A bound that is too large is safe here: it can make
                 # the tool say "this shape reaches the text", never the reverse.
                 path += [
-                    point(nums[-6], nums[-5]),
-                    point(nums[-4], nums[-3]),
-                    point(nums[-2], nums[-1]),
+                    point(numbers[-6], numbers[-5]),
+                    point(numbers[-4], numbers[-3]),
+                    point(numbers[-2], numbers[-1]),
                 ]
             elif op in ("v", "y"):
-                path += [point(nums[-4], nums[-3]), point(nums[-2], nums[-1])]
+                path += [point(numbers[-4], numbers[-3]), point(numbers[-2], numbers[-1])]
             elif op == "h":
                 if subpath_start is not None:
                     path.append(subpath_start)
             elif op == "re":
-                x, y, w, h = nums[-4:]
+                x, y, w, h = numbers[-4:]
                 path += [point(x, y), point(x + w, y), point(x + w, y + h), point(x, y + h)]
                 subpath_start = point(x, y)
 

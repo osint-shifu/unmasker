@@ -172,8 +172,9 @@ def _pdf_date(value: str) -> str:
     if not match or not match.group(1):
         return value
     parts = [int(g) if g else d for g, d in zip(match.groups(), (0, 1, 1, 0, 0, 0), strict=True)]
+    year, month, day, hour, minute, second = parts
     try:
-        stamp = datetime(*parts, tzinfo=timezone.utc)
+        stamp = datetime(year, month, day, hour, minute, second, tzinfo=timezone.utc)
     except ValueError:
         return value
     return stamp.isoformat().replace("+00:00", "Z")

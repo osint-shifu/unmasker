@@ -263,11 +263,11 @@ def _read_worksheet(
     applied: set[str] = set()
 
     hidden_columns: set[int] = set()
-    for column in root.iter(f"{MAIN}col"):
-        if not _is_true(column.get("hidden")):
+    for col in root.iter(f"{MAIN}col"):
+        if not _is_true(col.get("hidden")):
             continue
         try:
-            first, last = int(column.get("min", "0")), int(column.get("max", "0"))
+            first, last = int(col.get("min", "0")), int(col.get("max", "0"))
         except ValueError:
             continue
         # A single `col` can hide a range. Excel writes one element for a whole

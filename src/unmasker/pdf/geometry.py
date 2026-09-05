@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
+from typing import ClassVar
 
 
 @dataclass(frozen=True)
@@ -34,6 +35,10 @@ class Matrix:
     d: float
     e: float
     f: float
+
+    #: Declared here and assigned below the class, because the value is a
+    #: Matrix and cannot be built until the class exists.
+    IDENTITY: ClassVar[Matrix]
 
     def then(self, outer: Matrix) -> Matrix:
         """This transform applied first, then `outer`.
@@ -151,7 +156,8 @@ class Colour:
             g = _clamp(values[0])
             return Colour((g, g, g), "gray")
         if len(values) == 3:
-            return Colour(tuple(_clamp(v) for v in values), "rgb")
+            red, green, blue = (_clamp(v) for v in values)
+            return Colour((red, green, blue), "rgb")
         if len(values) == 4:
             c, m, y, k = (_clamp(v) for v in values)
             return Colour(((1 - c) * (1 - k), (1 - m) * (1 - k), (1 - y) * (1 - k)), "cmyk")

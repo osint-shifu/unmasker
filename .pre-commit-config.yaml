@@ -7,3 +7,16 @@ repos:
     hooks:
       - id: ruff
         args: [--fix]
+
+  # `if False:` is how a watched failure gets parked while the test that proves
+  # it is written, and ruff's selected rules (E, F, I, UP, B) do not flag it.
+  # One such guard reached the working tree in `jpeg.py` and disabled the
+  # start-of-scan check, so `dimensions()` read a frame header out of
+  # compressed data. The test caught it; nothing else would have.
+  - repo: local
+    hooks:
+      - id: no-parked-guards
+        name: no `if False:` left in src/
+        entry: 'if False:'
+        language: pygrep
+        files: ^src/.*\.py$

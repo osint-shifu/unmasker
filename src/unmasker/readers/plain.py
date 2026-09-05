@@ -34,7 +34,7 @@ def read_plain(path: Path) -> Extraction:
             f"{path.name} is not valid UTF-8 ({exc.reason} at byte {exc.start})"
         ) from exc
 
-    remarks = ()
+    remarks: tuple[str, ...] = ()
     if not text.strip():
         remarks = (
             "the file holds no text, so there was nothing to search"

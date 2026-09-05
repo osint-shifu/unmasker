@@ -349,21 +349,24 @@ def invisible_text(page: InterpretedPage) -> list[Finding]:
         # one. They are different statements, so they stay different findings.
         by_kind: dict[str, list[tuple[Glyph, TextRun]]] = {}
         for glyph, run in line:
-            kind, _ = _why_invisible(run)
-            by_kind.setdefault(kind, []).append((glyph, run))
+            reason = _why_invisible(run)
+            if reason is None:
+                continue  # filtered out by _lines() above; re-stated for the checker
+            by_kind.setdefault(reason[0], []).append((glyph, run))
 
         for entries in by_kind.values():
             text = _joined(entries)
             if not text.strip():
                 continue
             run = entries[0][1]
-            _, why = _why_invisible(run)
+            reason = _why_invisible(run)
+            if reason is None:
+                continue
+            kind, why = reason
             findings.append(
                 Finding(
                     detector="invisible-text",
-                    basis=(
-                        Basis.CIRCUMSTANTIAL if _why_invisible(run)[0] == "faint" else Basis.DIRECT
-                    ),
+                    basis=(Basis.CIRCUMSTANTIAL if kind == "faint" else Basis.DIRECT),
                     summary=f"{_count(text)} {why}",
                     human_sees="",
                     machine_reads=text,
@@ -741,9 +744,12 @@ def low_contrast_text(page: InterpretedPage) -> list[Finding]:
             text = "".join(g.char for g in glyphs[start:stop])
             if not text.strip():
                 continue
-            worst = max(gaps[i] for i in range(start, stop))
+            measured = [gap for gap in gaps[start:stop] if gap is not None]
             paper = behind[start]
             ink = inks[start]
+            if not measured or paper is None or ink is None:
+                continue  # _spans() only yields where all three were present
+            worst = max(measured)
             run = runs[start]
             findings.append(
                 Finding(

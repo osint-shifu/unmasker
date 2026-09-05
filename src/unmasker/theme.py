@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import os
 import sys
+from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import IntEnum
 from typing import TextIO
@@ -50,24 +51,28 @@ MUTED = Ink("#8a8a8a", 245, 90)
 FAINT = Ink("#585858", 240, 90)
 
 
-def resolve_depth(stream: TextIO | None = None, env: dict | None = None) -> Depth:
+def resolve_depth(
+    stream: TextIO | None = None, env: Mapping[str, str] | None = None
+) -> Depth:
     """Resolve once, at startup, from the stream and the environment.
 
     A terminal that cannot colour gets the same layout in plain text, never a
     different one.
     """
     stream = stream if stream is not None else sys.stdout
-    env = env if env is not None else os.environ
+    # `os.environ` is a Mapping and not a dict, so it needs its own name
+    # rather than being assigned back over the parameter.
+    variables: Mapping[str, str] = env if env is not None else os.environ
 
-    if env.get("NO_COLOR") is not None:
+    if variables.get("NO_COLOR") is not None:
         return Depth.NONE
     if not getattr(stream, "isatty", lambda: False)():
         return Depth.NONE
 
-    term = env.get("TERM", "")
+    term = variables.get("TERM", "")
     if term == "dumb":
         return Depth.NONE
-    if env.get("COLORTERM", "").lower() in ("truecolor", "24bit"):
+    if variables.get("COLORTERM", "").lower() in ("truecolor", "24bit"):
         return Depth.TRUECOLOR
     if "256" in term:
         return Depth.ANSI256

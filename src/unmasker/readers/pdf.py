@@ -49,9 +49,9 @@ def read_pdf(path: Path) -> Extraction:
 
     if reader.is_encrypted:
         try:
-            opened = reader.decrypt("")
+            opened = bool(reader.decrypt(""))
         except Exception:
-            opened = 0
+            opened = False
         if not opened:
             raise UnreadableFile(
                 f"{path.name} is encrypted and needs a password unmasker does not have"

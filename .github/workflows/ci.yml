@@ -48,3 +48,47 @@ jobs:
       # nothing on this machine could have told us.
       - name: Tests
         run: pytest
+
+  types:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: python -m pip install -e ".[dev]"
+      - name: Mypy
+        run: mypy
+
+  package:
+    runs-on: ubuntu-latest
+
+    # The tests above run from a checkout, so they prove nothing about the
+    # artifact people actually install. A wheel that cannot be built, or that
+    # is missing a file, fails only for them and only after publication.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build
+        run: |
+          python -m pip install build twine
+          python -m build
+          twine check dist/*
+      - name: The typing marker has to be inside the wheel
+        run: |
+          python - <<'CHECK'
+          import glob, zipfile
+          names = zipfile.ZipFile(glob.glob("dist/*.whl")[0]).namelist()
+          assert "unmasker/py.typed" in names, names
+          CHECK
+      # Installing it and running it is the part that catches an import which
+      # type-checks and does not exist at runtime. Mypy passing is not the
+      # program running.
+      - name: Install what was built and run it
+        run: |
+          python -m pip install dist/*.whl
+          unmasker --version

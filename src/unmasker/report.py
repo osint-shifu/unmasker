@@ -22,7 +22,7 @@ say", so every entry is two readings and the gap between them.
 from __future__ import annotations
 
 import textwrap
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from .findings import Basis, Finding
 from .readers import Extraction
@@ -36,11 +36,12 @@ LEFT = len(MARGIN) + 2  # margin, gutter glyph, space
 class Style:
     depth: Depth = Depth.NONE
     width: int = 78
-    glyph: dict[str, str] | None = None
-
-    def __post_init__(self) -> None:
-        if self.glyph is None:
-            self.glyph = {name: rich for name, (rich, _) in GLYPHS.items()}
+    #: Filled from GLYPHS when not given, so it is never None after
+    #: construction. Declaring it Optional made every use site a type error
+    #: for a state that cannot be observed.
+    glyph: dict[str, str] = field(
+        default_factory=lambda: {name: rich for name, (rich, _) in GLYPHS.items()}
+    )
 
     def ink(self, text: str, ink: Ink, *, bold: bool = False) -> str:
         return paint(text, ink, self.depth, bold=bold)
