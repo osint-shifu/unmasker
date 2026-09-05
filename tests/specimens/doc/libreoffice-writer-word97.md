@@ -51,12 +51,22 @@ ASCII and mangles every name with a diacritic in it.
 in a dictionary stored as property 0. A reader built to the specification finds
 nothing there.
 
-## What this specimen does not cover
+## The `WordDocument` stream
 
-The `WordDocument` stream. Its text is a binary format with a piece table, and
-none of it is read — which is why the report says this file's text *was not
-read* rather than that it has none, and why no metadata value here is called
-undisclosed. Nothing compared them against a page.
+Read since 0.3.0, by `unmasker.word`. This file is the simple case and is here
+for it: **one story, one piece, no fields, no marks.** Its 68 characters are
+the whole of its text, so a reader that gets the piece table right and nothing
+else still passes against it — which is precisely why the corpus also holds
+[`libreoffice-writer-word97-stories.doc`](libreoffice-writer-word97-stories.doc),
+where more than half the text is outside the main story, and
+[`libreoffice-writer-word97-marks.doc`](libreoffice-writer-word97-marks.doc),
+where some of it is not on the page at all.
+
+Its text being read is what lets this file's metadata be called undisclosed.
+Until then nothing had compared *Halina Probna-Test* against a page, so
+nothing could say the page does not show her.
+
+## What this specimen does not cover
 
 Producers other than LibreOffice. Word itself is not on this machine. The
 container reader was checked against two Excel 97 workbooks written by

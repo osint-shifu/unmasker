@@ -9,6 +9,75 @@ release: `unmasker.scan/1` for one file, `unmasker.survey/1` for a folder. A
 consumer should read that rather than the release number, because the release
 moves whenever anything does and the schema moves only when the shape changes.
 
+## [0.3.0] - 2026-09-05
+
+A minor version because a `.doc` is now read for its text rather than only for
+what it says about itself, and because that unlocks every text detector on a
+format where none of them ran. The runtime dependency count is unchanged, and
+stays one: the piece table, the property tables and the compound file under
+them are all read here.
+
+### Added
+
+- **A `.doc`'s text, story by story.** A Word document lays its body, its
+  footnotes, its headers and footers, its comments, its endnotes and its text
+  boxes end to end in a single character-position space, and the header says
+  how long each part is. In the corpus specimen the body is 267 characters of
+  504: a reader that took the main story and stopped would search just over
+  half the file and then report having searched it, and the half it skipped
+  holds a comment naming a bidder and a header marked *internal circulation
+  only*. The report names which stories were searched.
+
+- **Comments, with the name the file puts on each one.** The text is in the
+  annotation story, the names are in a table of their own, and a third table
+  says which name goes with which comment. Same finding and same detector name
+  as a DOCX comment or a PDF annotation, arriving from a different container.
+
+- **Tracked changes**, with the author and the date of each. A deleted
+  sentence is `deleted-text`, the same finding a DOCX deletion makes.
+
+- **Text carrying Word's hidden attribute**, as `invisible-text` — the name a
+  PDF render mode that paints neither fill nor stroke already produces. The
+  statement is identical: these characters are in the file and not on the page.
+
+- **Field instructions.** A hyperlink is stored as an instruction, a separator
+  and a result; the page shows the result. The instructions that name a
+  location are quoted in a remark, in full. They are not findings: every table
+  of contents and page number in every document is a field, and a detector
+  that fired on all of them would say nothing.
+
+- Three specimens and a builder for each: a document whose text is mostly
+  outside the main story, one carrying a tracked deletion and a hidden run,
+  and an Excel 97 workbook.
+
+### Fixed
+
+- **A deletion and a hidden run were being reported as text on the page.** A
+  .doc keeps both in the piece table beside the printed text, and nothing in
+  the characters says which is which — that is a `Chpx`, in a 512-byte page,
+  addressed by byte offset while everything else counts characters. Reading
+  the piece table alone would have had this tool announce a deleted sentence
+  as visible prose, and Word's hidden text as ordinary body text, which is the
+  exact statement it exists to contradict. Found by building a specimen with
+  tracked changes and looking at what came out, not by a failing test.
+
+- The remark saying a legacy file's text was not read covered `.doc`, `.xls`
+  and `.ppt` at once. It now names the format, and the corpus holds a `.xls`
+  so that the claim cannot be loosened to keep passing once the format beside
+  it became readable.
+
+### Notes
+
+`0x0800` is the delete mark and `0x0801` the insert, which is the opposite of
+what was written down from memory before the bytes were dumped. Guessing that
+pair the wrong way round produces a tool that takes insertions off the page
+*and* reports deletions as visible text — wrong in both directions, and green
+against any fixture built from the same wrong memory. Every structure this
+release reads was measured against a real file first, and two others corrected
+a specification recalled wrongly: `GrpXstAtnOwners` has no header at all, and
+LibreOffice writes `nFib` 257 rather than the 193 a Word 97 reader might check
+for.
+
 ## [0.2.1] - 2026-09-05
 
 ### Fixed

@@ -185,6 +185,15 @@ class Extraction:
     audience had seen it - and then reported clean.
     """
 
+    word: object | None = None
+    """A `WordText` record for the legacy Word reader, else None.
+
+    Separate from `units` for the reason `sheets` is: the characters an
+    application agreed not to draw - a tracked deletion, a run marked hidden -
+    must not reach `units`, where they would be searched as though a person
+    could see them, and then reported as text the document shows.
+    """
+
     sheets: object | None = None
     """A `SheetRecord` for readers that can see a workbook, else None.
 

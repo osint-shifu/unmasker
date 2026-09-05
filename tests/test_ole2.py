@@ -22,6 +22,11 @@ from unmasker.ole2 import CompoundFile, NotACompoundFile
 
 SPECIMEN = Path(__file__).parent / "specimens" / "doc" / "libreoffice-writer-word97.doc"
 
+#: A workbook, whose text this tool still does not read. The claims below
+#: about a file that was *not* searched need a file that was not searched, and
+#: a .doc stopped being one when `unmasker.word` landed.
+WORKBOOK = Path(__file__).parent / "specimens" / "xls" / "libreoffice-calc-excel97.xls"
+
 
 @pytest.fixture
 def compound():
@@ -121,13 +126,20 @@ def test_a_word_97_file_is_dispatched_by_its_signature_not_its_name():
     assert read(SPECIMEN).kind == "doc"
 
 
-def test_the_report_says_the_text_was_not_read_rather_than_absent():
-    extraction = read(SPECIMEN)
+def test_a_format_whose_text_is_unread_says_so_rather_than_reporting_none():
+    """BIFF is not implemented, and a workbook must say that in those words.
+
+    This assertion used to be made against the .doc. Word's text is read now,
+    so the claim moved to a file it is still true of rather than being
+    loosened to keep passing - which is how a report ends up describing a
+    search that never happened.
+    """
+    extraction = read(WORKBOOK)
     assert extraction.text_unread is True
     assert extraction.has_text is False
 
 
-def test_the_metadata_is_read_even_though_the_text_is_not():
+def test_the_metadata_is_read_out_of_both_property_streams():
     fields = {f.name: f.value for f in read(SPECIMEN).metadata.fields}
     assert fields["Author"] == "Halina Probna-Test"
     assert fields["Company"] == "Osint Shifu sp. z o.o."
@@ -137,16 +149,25 @@ def test_nothing_is_called_undisclosed_when_nothing_was_compared():
     """The whole reason `text_unread` exists.
 
     Every content field is absent from a text that was never read, so without
-    this the tool would report six findings saying the document does not show
+    this the tool would report findings saying the document does not show
     values it was never asked about. A gap nobody looked for is not a gap.
     """
-    found = collect(read(SPECIMEN))
+    found = collect(read(WORKBOOK))
     assert [f for f in found if f.detector == "undisclosed-metadata"] == []
 
 
 def test_what_the_file_says_of_itself_is_still_put_in_front_of_a_reader():
     """Not a finding, and not silence either. A value this tool read and
     mentioned to nobody would be the worst of both."""
-    remarks = " ".join(read(SPECIMEN).remarks)
-    assert "Halina Probna-Test" in remarks
+    remarks = " ".join(read(WORKBOOK).remarks)
+    assert "Marek Zapasowy-Przyklad" in remarks
     assert "not compared" in remarks
+
+
+def test_a_value_is_called_undisclosed_once_there_is_a_page_to_compare_it_to():
+    """The other half of the same rule. The .doc names an author the page does
+    not, and until its text was read this tool could not say so."""
+    found = collect(read(SPECIMEN))
+    undisclosed = [f for f in found if f.detector == "undisclosed-metadata"]
+    assert any("Halina Probna-Test" in f.machine_reads for f in undisclosed)
+    assert read(SPECIMEN).text_unread is False

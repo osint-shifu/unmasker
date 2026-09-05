@@ -108,10 +108,11 @@ EXIT = (
 )
 
 #: One line. It used to end "Presentations are refused", which was the first
-#: surprise a reader could have; decks are read now.
+#: surprise a reader could have; decks are read now. It went stale once
+#: already, for a whole release, which is why a test now ties it to the corpus.
 FORMATS = (
-    "PDF · DOCX · ODT · XLSX · ODS · PPTX · ODP · JPEG · text, "
-    "and DOC · XLS · PPT for what they say about themselves."
+    "PDF · DOCX · ODT · XLSX · ODS · PPTX · ODP · JPEG · DOC · text, "
+    "and XLS · PPT for what they say about themselves."
 )
 
 
