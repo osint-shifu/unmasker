@@ -1,10 +1,10 @@
 <div align="center">
 
-# Unmasker
+# unmasker
 
 ### What a human sees in a document, against what a machine reads out of it.
 
-**Local, read-only detection of hidden and failed-redaction content in documents.**
+**Local, read-only detection of hidden, residual and failed-redaction content in documents.**
 
 [![PyPI](https://img.shields.io/pypi/v/unmasker?style=flat-square&color=3775A9)](https://pypi.org/project/unmasker/)
 ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-3776AB?style=flat-square)
@@ -15,223 +15,31 @@
 [![CI](https://github.com/osint-shifu/unmasker/actions/workflows/ci.yml/badge.svg)](https://github.com/osint-shifu/unmasker/actions/workflows/ci.yml)
 ![License](https://img.shields.io/badge/license-Apache--2.0-8250df?style=flat-square)
 
-[Why Unmasker?](#why-unmasker) ·
-[What it finds](#what-it-finds) ·
 [Install](#installation) ·
 [Usage](#usage) ·
+[What it finds](#what-it-finds) ·
 [Examples](#practical-examples) ·
-[How it decides](#how-it-decides-what-to-say) ·
-[JSON](#json-and-automation)
+[Detector reference](#detector-reference) ·
+[Automation](#json-and-automation)
 
 </div>
 
 ---
 
-A black rectangle drawn over text is not a redaction. The text is still in the
-file and every parser reads it. `unmasker` reports each place the two layers
-disagree — and says nothing beyond what it can show.
+unmasker finds content that survives inside a document but is hidden, covered,
+deleted, filtered, cropped or otherwise absent from what a person normally
+sees.
 
-```console
-$ unmasker leaked.pdf
-
-  unmasker  leaked.pdf                                          4 findings
-  ────────────────────────────────────────────────────────────────────────
-
-  ● 22 characters under a black shape at x 117.5-268.7, y           page 1
-    684.2-698.5; the rest of the line still reads "Name:"
-  │ human sees     ██████████████████████
-  │ machine reads  Wanda Testowa-Przyklad
-
-  ● 21 characters under a black shape at x 114.8-259.3, y           page 1
-    664.5-678.7; the rest of the line still reads "Email:"
-  │ human sees     █████████████████████
-  │ machine reads  w.testowa@example.org
-```
-
-Every finding names the two readings, where to look, and how the tool knows.
-There are no verdicts: it does not say a document was manipulated, because
-that is the reader's conclusion to draw and a tool that draws it has to be
-trusted blindly.
-
-## Why Unmasker?
-
-The person redacting a document sees a black bar and believes the job is done.
-It keeps happening in court filings and government releases, because the tool
-that draws the bar does not remove what is under it.
-
-The same reading serves two more uses. A PDF fed to a retrieval pipeline can
-carry instructions a human reviewer will never see. And a leaked or altered
-document can be checked: what did the tracked changes hold, whose name is in
-the metadata, does the text layer agree with the picture.
-
-## What it finds
-
-### On the page
-
-| Detector | What it reports |
-| :--- | :--- |
-| `covered-text` | text under a filled shape, reported per character — a bar dragged too short is reported as covering exactly what it covers |
-| `text-under-image` | text under a picture, kept separate because a scan of a printed page looks the same and usually agrees with itself |
-| `invisible-text` | text a render mode never paints, or an opacity that paints nothing — `color: transparent` is one CSS declaration and changes no render mode at all |
-| `low-contrast-text` | text in the colour of what is behind it, whether that is a shape or the bare paper |
-| `off-page-text` | text outside the visible page — a crop box smaller than the media box is how a "cropped" file keeps what was cropped off |
-
-### In the characters
-
-Works on anything that yields text, so it covers DOCX, HTML, Markdown and
-source as well as PDF.
-
-| Detector | What it reports |
-| :--- | :--- |
-| `zero-width` | zero-width spaces, joiners, soft hyphens, word joiners |
-| `bidi-control` | direction overrides — a filename written `invoice⟨U+202E⟩gpj.exe` in the file reads as `invoiceexe.jpg` on screen, and is an executable |
-| `tag-characters` | plane-14 tag characters, decoded; the channel of choice for hiding instructions in text meant for a model |
-| `mixed-script` | a single word spanning two scripts — Cyrillic `а` inside a Latin domain |
-
-### In a spreadsheet
-
-A row, a column or a whole sheet carries an attribute saying not to draw it,
-and every value in it stays in the file exactly as typed. Someone selects three
-columns, right-clicks, chooses Hide, and sends the workbook out believing the
-numbers are gone.
-
-| Detector | What it reports |
-| :--- | :--- |
-| `hidden-sheet` | a sheet the workbook carries and never shows — and it says so louder when the sheet is marked `veryHidden`, which the application offers no way to undo |
-| `hidden-rows` | rows nobody sees, collapsed into one finding per block, because hiding rows 10 to 40 is one act by one person |
-| `hidden-columns` | the same by column, addressed the way the person who hid it saw it: `column D`, not an index |
-| `filtered-rows` | rows a filter is holding back rather than a person having hidden them — a weaker claim, and reported as one |
-| `changed-cell` | what change tracking took out of a cell and left in the file, with who changed it and when — the one finding here whose **both** columns carry text, because the current value is sitting in the cell |
-
-A spreadsheet stores a date as `45366` and a price as `240000`. Dates are
-rendered, because a date cell holds a count of days and the conversion is
-exact. Everything else is quoted as the file stores it, with a note naming the
-format the sheet applies — a number formatter that is nearly right quotes a
-figure that is nearly right, which is worse than an exact quotation and a
-sentence of context.
-
-### In a presentation
-
-| Detector | What it reports |
-| :--- | :--- |
-| `hidden-slide` | a slide the deck skips when it is shown, quoted in full — the one that was cut before the meeting and never deleted |
-| `speaker-notes` | a note that was never on the screen, which is what notes are for and why the candid line ends up in one |
-
-### In a photograph
-
-A picture has no text layer, so the question inverts: not *what does this
-document say that it does not show*, but *what does this file show that the
-picture does not*.
-
-| Detector | What it reports |
-| :--- | :--- |
-| `stale-thumbnail` | the preview in the EXIF is a different shape from the picture, so it was not made from it — cropping a photograph does not regenerate the preview, and ImageMagick carries the old one through unasked |
-
-With `--ocr` the same file is asked the stronger question: what is legible in
-the preview and absent from the picture. On the specimen that is the witness
-name the crop removed.
-
-### In the container
-
-| Detector | What it reports |
-| :--- | :--- |
-| `deleted-text` | what a tracked deletion took off the page and left in the file, with who deleted it and when |
-| `comment` | comments — in Word, in OpenDocument, and in a PDF where they are annotations hanging off the page that no text extraction reports |
-| `revision-history` | one line naming who edited the file and when, never one finding per change |
-| `undisclosed-metadata` | a name, a client, a codename or a classification the document's own text never shows |
-| `metadata-path` | a filesystem path, which leaks a directory structure and usually an account |
-| `metadata-conflict` | the file contradicting itself — a PDF states its metadata twice, and a tool that clears one copy and not the other leaves exactly that |
-
-### By reading the page back
-
-`--ocr` renders each page and reads the picture with an OCR engine. It needs
-`ghostscript` and `tesseract`, and costs seconds a page, which is why it is not
-the default.
-
-| Detector | What it reports |
-| :--- | :--- |
-| `unrendered-text` | words the file holds that the page does not show — **found without knowing how they are hidden** |
-| `unextractable-text` | words the page shows that the file does not hold; the only finding here where the two columns swap |
-
-Every other detector knows a trick, and each was written after a producer was
-caught doing something particular. This one knows nothing, so a method nobody
-has thought of still fails it. On the specimens the two approaches name the
-same words on every file that hides text, and both stay silent on every
-control — which is not something either could arrange for the other.
-
-## Installation
-
-```bash
-pipx install unmasker
-```
-
-or `uv tool install unmasker`. Either puts `unmasker` on the PATH in an
-environment of its own, which is what you want for a command-line tool: it
-never shares a site-packages with anything you are investigating.
-
-From a checkout, to work on it:
-
-```bash
-python3 -m venv .venv
-.venv/bin/pip install -e .
-.venv/bin/unmasker document.pdf
-```
-
-Python 3.10 or later, and one runtime dependency — `pypdf`, which is pure
-Python, BSD-licensed and has no dependencies of its own. It was checked rather
-than assumed, and any second one has to earn its place the same way — in
-writing.
-
-Reads PDF, DOCX, ODT, XLSX, ODS, PPTX, ODP, JPEG and any text file. Local,
-read-only, no network, and it never writes to the file it is given.
-
-## Usage
-
-```text
-unmasker <file>   [options]
-unmasker <folder> [options]
-```
-
-Point it at a **folder** and it surveys the lot: how much was read, how much
-could not be, which kinds of finding turned up and in how many files, and which
-files to open next. The screen triages and `--json` carries every finding, so
-there is no `--full` — the archive already exists.
-
-It never ranks the files. Sorting the worst documents to the top would be the
-judgement this tool leaves to its reader, so the tally counts files per kind
-and the list is in path order.
-
-| Option | Purpose |
-| :--- | :--- |
-| `--json` | one object on stdout, for a pipeline that wants to sort or filter |
-| `--html` | one self-contained page on stdout — redirect it into a file and send it |
-| `--md` | Markdown on stdout, for a wiki, a ticket or a pull request |
-| `--ocr` | render each page and read the picture back (needs `ghostscript`, `tesseract`) |
-| `--width N` | wrap at N columns instead of measuring the terminal |
-| `--version` | print the version and exit |
-| `-h`, `--help` | the full option list |
-
-| Code | Meaning |
-| :--- | :--- |
-| `0` | read, searched, nothing found |
-| `1` | read, searched, findings exist |
-| `2` | could not be read |
-
-> [!IMPORTANT]
-> Three exit statuses rather than two, because **a file that could not be read
-> is not a file that came back clean**. A pipeline that cannot tell those apart
-> will eventually wave through the one document it should have stopped.
-
-## Practical examples
-
-### One document, reported for a person
+A black rectangle drawn over text is not a redaction. The page may look clean
+while the original text remains in the file and is still readable by a parser.
+unmasker reports that mismatch and stops there - evidence, not a verdict.
 
 ```bash
 unmasker tests/specimens/pdf/libreoffice-writer-black-bars.pdf
 ```
 
 ```text
-  unmasker  libreoffice-writer-black-bars.pdf                     4 findings
+  unmasker  tests/specimens/pdf/libreoffice-writer-black-bars.pdf 4 findings
   ──────────────────────────────────────────────────────────────────────────
 
   ● 22 characters under a black shape at x 117.5-268.7, y             page 1
@@ -239,10 +47,20 @@ unmasker tests/specimens/pdf/libreoffice-writer-black-bars.pdf
   │ human sees     ██████████████████████
   │ machine reads  Wanda Testowa-Przyklad
 
+  ● 21 characters under a black shape at x 114.8-259.3, y             page 1
+    664.5-678.7; the rest of the line still reads "Email:"
+  │ human sees     █████████████████████
+  │ machine reads  w.testowa@example.org
+
   ● 15 characters under a black shape at x 123.1-228.1, y             page 1
     644.7-658.9; the rest of the line still reads "Telephone:"
   │ human sees     ███████████████
   │ machine reads  +48 601 000 000
+
+  ● 37 characters under a black shape at x 119.0-369.1, y             page 1
+    624.9-639.2; the rest of the line still reads "Address:"
+  │ human sees     █████████████████████████████████████
+  │ machine reads  ul. Przykladowa 12/3, 00-001 Warszawa
 
   notes                                                               1 note
   ──────────────────────────────────────────────────────────────────────────
@@ -253,13 +71,163 @@ unmasker tests/specimens/pdf/libreoffice-writer-black-bars.pdf
   searched 1 page of 1. 4 findings in 1 kind.
 ```
 
-### A workbook whose columns were hidden rather than removed
+Every finding says what a human sees, what a machine reads, where the mismatch
+is and how the tool knows.
+
+That file is a specimen committed to this repository, as is every other
+example on this page. Clone it and the commands run.
+
+## Installation
+
+```bash
+pipx install unmasker
+```
+
+Or:
+
+```bash
+uv tool install unmasker
+```
+
+Python 3.10 or later. The default install has one runtime dependency: `pypdf`.
+unmasker runs locally, makes no network requests and never modifies the file it
+is given.
+
+From a checkout:
+
+```bash
+git clone https://github.com/osint-shifu/unmasker
+cd unmasker
+python3 -m venv .venv
+.venv/bin/pip install -e .
+.venv/bin/unmasker document.pdf
+```
+
+## Usage
+
+```text
+unmasker <file>   [options]
+unmasker <folder> [options]
+```
+
+Scan one file:
+
+```bash
+unmasker document.pdf
+```
+
+Survey a folder:
+
+```bash
+unmasker ~/cases/kowalski
+```
+
+Produce machine-readable or shareable output:
+
+```bash
+unmasker document.pdf --json
+unmasker document.pdf --md > report.md
+unmasker ~/cases/kowalski --html > report.html
+```
+
+| Option | Purpose |
+| :--- | :--- |
+| `--json` | emit one JSON object on stdout for a pipeline to sort or filter |
+| `--html` | emit one self-contained HTML report on stdout |
+| `--md` | emit Markdown on stdout for a wiki, ticket or pull request |
+| `--ocr` | render a page and read it back to catch mismatches without knowing the hiding technique |
+| `--width N` | wrap terminal output at N columns |
+| `--version` | print the version and exit |
+| `-h`, `--help` | show the full option list |
+
+Exit status is part of the interface:
+
+| Code | Meaning |
+| :--- | :--- |
+| `0` | read, searched, nothing found |
+| `1` | read, searched, findings exist |
+| `2` | could not be read |
+
+> [!IMPORTANT]
+> A file that could not be read is not a file that came back clean. unmasker
+> keeps those states separate so a pipeline cannot silently treat failure as a
+> clean result.
+
+## What it finds
+
+| Area | Examples |
+| :--- | :--- |
+| PDF pages | covered text, text under images, invisible text, low contrast, off-page content |
+| Unicode | zero-width characters, bidi controls, tag characters, mixed scripts |
+| Word / ODT | tracked deletions, comments, revision history, metadata leaks |
+| Excel / Calc | hidden sheets, rows and columns, filtered rows, tracked cell changes |
+| PowerPoint / Impress | hidden slides and speaker notes |
+| JPEG | stale EXIF thumbnails that can preserve content removed by cropping |
+| Metadata | undisclosed values, local filesystem paths and conflicting metadata copies |
+| OCR comparison | text present in the file but absent from the rendered page, and the reverse |
+
+Supported inputs are PDF, DOCX, ODT, XLSX, ODS, PPTX, ODP, JPEG and UTF-8 text.
+Content is identified from the file itself rather than trusted solely from the
+extension.
+
+## Practical examples
+
+### Text under an image
+
+```bash
+unmasker tests/specimens/pdf/libreoffice-writer-image-over-text.pdf
+```
+
+```text
+  unmasker                                                         1 finding
+    tests/specimens/pdf/libreoffice-writer-image-over-text.pdf
+  ──────────────────────────────────────────────────────────────────────────
+
+  ● 22 characters under an image at x 123.3-245.9, y 702.8-720.0; an  page 1
+    image over a text layer is also what a scan of a printed page
+    looks like, and there the two normally agree; the rest of the
+    line still reads "Subject:"
+  │ human sees     ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒
+  │ machine reads  Ludmila Wieczorek-Test
+
+  notes                                                               1 note
+  ──────────────────────────────────────────────────────────────────────────
+    the file says it was made by Creator Writer; Producer LibreOffice 24.2,
+    and dates itself CreationDate 2026-08-31T23:50:46Z
+
+  ──────────────────────────────────────────────────────────────────────────
+  searched 1 page of 1. 1 finding in 1 kind.
+```
+
+An image over text is also what a scan of a printed page looks like.
+unmasker says so in the finding rather than calling it a redaction.
+
+### Hidden spreadsheet data
 
 ```bash
 unmasker tests/specimens/xlsx/libreoffice-calc-hidden-columns.xlsx
 ```
 
 ```text
+  unmasker                                                        7 findings
+    tests/specimens/xlsx/libreoffice-calc-hidden-columns.xlsx
+  ──────────────────────────────────────────────────────────────────────────
+
+  comment                                                          1 finding
+  ──────────────────────────────────────────────────────────────────────────
+  ● a comment by Halina Probna-Test, at a time the file does not  whole file
+    state, carried in the file and not part of the document body
+  │ human sees     nothing on the page
+  │ machine reads  Panel agreed the reserve before the bids were opened. Not
+  │                for the file we release.
+
+  revision-history                                                 1 finding
+  ──────────────────────────────────────────────────────────────────────────
+  ● the file records 1 comment, by 1 person. A name here is       whole file
+    whatever the application that wrote it was configured to say
+  │ human sees     nothing on the page
+  │ machine reads  Halina Probna-Test
+
   hidden-sheet                                                     1 finding
   ──────────────────────────────────────────────────────────────────────────
   ● sheet "Workings" is marked hidden, and holds 1 value still    whole file
@@ -268,13 +236,44 @@ unmasker tests/specimens/xlsx/libreoffice-calc-hidden-columns.xlsx
   │ machine reads  Reserve set at 240,000. Kowalski came in 12% under; the
   │                others were told nothing.
 
+  hidden-rows                                                      1 finding
+  ──────────────────────────────────────────────────────────────────────────
+  ● row 4 of sheet "Evaluation" is hidden, and holds 6 values     whole file
+    still in the file
+  │ human sees     nothing on the page
+  │ machine reads  Delta Consulting sp. z o.o. | 82 | 44 | 196000 | 63 |
+  │                withdrawn after the deadline - do not list
+
   hidden-columns                                                   1 finding
   ──────────────────────────────────────────────────────────────────────────
   ● column D of sheet "Evaluation" is hidden, and holds 5 values  whole file
     still in the file
+  │ human sees     nothing on the page
+  │ machine reads  Reserve price (EUR) | 211000 | 238000 | 196000 | 251000
+
+  undisclosed-metadata                                            2 findings
+  ──────────────────────────────────────────────────────────────────────────
+  ● the creator field of docProps/core.xml holds a value the      whole file
+    document does not show anywhere in its text
+  │ human sees     nothing on the page
+  │ machine reads  Halina Probna-Test
+
+  ● the title field of docProps/core.xml holds a value the        whole file
+    document does not show anywhere in its text
+  │ human sees     nothing on the page
+  │ machine reads  Tender evaluation - panel copy
+
+  notes                                                               1 note
+  ──────────────────────────────────────────────────────────────────────────
+    the file says it was made by Application
+    LibreOffice/24.2.7.2$Linux_X86_64 LibreOffice_project/420$Build-2;
+    AppVersion 15.0000, and counts revision 0; TotalTime 0
+
+  ──────────────────────────────────────────────────────────────────────────
+  searched the text of this file. 7 findings in 6 kinds.
 ```
 
-### A folder, surveyed: which file to open next
+### Case-folder triage
 
 ```bash
 unmasker tests/specimens/docx
@@ -311,162 +310,244 @@ unmasker tests/specimens/docx
   searched 6 files. unmasker <file> for the detail, --json for all of it.
 ```
 
-### A page somebody can be sent
+A directory scan reports what was read, what could not be read, which detector
+kinds appeared and which files contain findings. It does not rank files by
+"severity". Use the detailed file report or `--json` for every finding.
 
-```bash
-unmasker ~/cases/kowalski --html > report.html
-```
-
-One file, no external anything, no JavaScript, and print rules for the day it
-goes into a case file. It carries the **full** detail rather than the survey's
-summary — a browser has search and a scrollbar where a terminal has neither.
-
-### When the technique is unknown
+### Read the rendered page back
 
 ```bash
 unmasker scan.pdf --ocr
 ```
 
-## Report safety
+`--ocr` asks a different question: does the text stored in the document agree
+with the page after it is rendered? This can expose a hiding technique for
+which there is no dedicated detector yet.
 
-Everything this tool quotes came out of a document somebody else wrote. That
-makes every report an untrusted document too, and the two shareable formats
-are escaped accordingly.
+For PDF page comparison it requires `ghostscript` and `tesseract` on `PATH` and
+costs seconds per page, so it is intentionally opt-in and refused for directory
+surveys.
 
-`--html` writes to stdout and is redirected, rather than taking an `--out`
-option, because this tool never writes anything. Every value on the page is
-escaped: a PDF whose metadata reads `<img src=x onerror=…>` would otherwise put
-a live handler into the report of itself.
+## Detector reference
 
-> [!WARNING]
-> `--md` is the **more** dangerous of the two to get wrong, not the safer. An
-> HTML renderer handed `<script>` prints it; a Markdown renderer runs it,
-> because passing raw HTML through is what Markdown does.
+The detector slug is stable output intended for reports and automation.
 
-So quoted evidence goes in a fenced block — with a fence grown longer than any
-run of backticks inside it — prose is escaped, and a `|` never reaches a table
-cell unescaped.
+### Page and rendering
 
-## How it decides what to say
+| Detector | What it reports |
+| :--- | :--- |
+| `covered-text` | text underneath a filled shape, measured per character |
+| `text-under-image` | text underneath an image, kept distinct from a filled-shape redaction |
+| `invisible-text` | text that the page's rendering instructions do not paint |
+| `low-contrast-text` | text too close in colour to the background behind it |
+| `off-page-text` | text outside the visible page or crop box |
+| `unrendered-text` | words stored in the file that OCR cannot find on the rendered page |
+| `unextractable-text` | words visible to OCR on the rendered page but absent from the extracted text |
 
-**Colour encodes how the tool knows, never how bad it is.** Three classes,
-learned once:
+### Characters
 
-- **direct** — the bytes are in the file and were read out; nothing is inferred
-- **circumstantial** — consistent with hiding, and with innocent explanations
-  too. A word spanning two scripts may be an attack or may be how somebody
-  writes; OCR failing to read text looks exactly like text not being there
-- **self-reported** — the file's own account of itself. A name in a document is
-  whatever the application that wrote it was configured to say
+| Detector | What it reports |
+| :--- | :--- |
+| `zero-width` | zero-width spaces, joiners, soft hyphens and word joiners |
+| `bidi-control` | Unicode direction controls that can change how a string appears on screen |
+| `tag-characters` | plane-14 Unicode tag characters, decoded when possible |
+| `mixed-script` | a single word containing characters from multiple scripts |
 
-There are no scores. `55` reads as a probability and never was one; a word can
-be argued with by the person reading the report, which is the point.
+### Spreadsheets
 
-**Different questions are never ranked against each other.** A page can have a
-bar over its text *and* an invisible character *and* stale metadata. Those are
-three findings, not one winner.
+| Detector | What it reports |
+| :--- | :--- |
+| `hidden-sheet` | a hidden or very-hidden sheet that still carries values |
+| `hidden-rows` | hidden rows that still carry values, collapsed into blocks |
+| `hidden-columns` | hidden columns that still carry values |
+| `filtered-rows` | rows currently excluded by a worksheet filter |
+| `changed-cell` | a tracked cell change, including the replaced value when available |
+
+### Presentations
+
+| Detector | What it reports |
+| :--- | :--- |
+| `hidden-slide` | a slide stored in the deck but skipped when the presentation is shown |
+| `speaker-notes` | speaker-note text that never appears on the projected slide |
+
+### Images
+
+| Detector | What it reports |
+| :--- | :--- |
+| `stale-thumbnail` | an embedded EXIF preview whose dimensions show it was not regenerated from the current image |
+
+### Container, revisions and metadata
+
+| Detector | What it reports |
+| :--- | :--- |
+| `deleted-text` | text preserved inside a tracked deletion |
+| `comment` | comments and annotations stored with the document |
+| `revision-history` | document revision authorship and edit history |
+| `undisclosed-metadata` | metadata values that do not appear in the document's visible text |
+| `metadata-path` | filesystem paths exposed by document metadata |
+| `metadata-conflict` | contradictory copies of metadata stored inside the same file |
+
+## Evidence model
+
+unmasker reports observable mismatches. It does not decide whether a document
+is malicious, manipulated or safe.
+
+Each finding carries one of three evidence bases:
+
+- **direct** - the relevant bytes are in the file and were read out directly
+- **circumstantial** - the observation is consistent with hiding, but an innocent explanation can also fit
+- **self-reported** - the document or application reports the fact about itself
+
+There are no severity scores or synthetic confidence percentages. Different
+questions are not ranked against each other.
 
 > [!NOTE]
-> **"Nothing found" has two meanings**, and the report keeps them apart.
-> *Searched and it is not there* is one. *There was nothing this tool could
-> search* is the other — a page with no text layer, or text sitting on a
-> picture whose colour at that point is not in the file. The second comes with
-> a note saying so, and `--json` carries it as `"searched": false`.
+> "Nothing found" and "nothing could be searched" are different results.
+> unmasker keeps them separate. JSON exposes this explicitly through the
+> `searched` field.
 
-**Nothing is truncated.** A value too long for the line wraps. An ellipsis sends
-the reader to fetch the value another way, which defeats having read the report.
+Values are not shortened with ellipses. If evidence is long, the report wraps
+it instead of silently dropping part of it.
+
+## Reports
+
+The terminal report is for triage. Three stdout formats are available when the
+result needs to be stored, processed or sent to someone else:
+
+- `--json` for automation
+- `--html` for a self-contained human-readable report
+- `--md` for Markdown-based systems
+
+unmasker treats report content as untrusted because every quoted value came
+from a file being investigated. HTML values are escaped, Markdown evidence is
+fenced or escaped, and generated HTML contains no JavaScript or external
+resources.
+
+The tool has no `--out` option. Redirection keeps the core rule simple:
+unmasker itself never writes to the input or to the case directory.
 
 ## JSON and automation
 
-`--json` writes one object on stdout. The exit status still gates, so a
-pipeline needs no second mode:
+`--json` writes one object on stdout while the exit status remains usable as a
+pipeline gate:
 
 ```bash
-unmasker leaked.pdf --json > findings.json || echo "findings exist"
+unmasker document.pdf --json > findings.json || echo "findings exist"
 ```
 
-Two shapes, named in the document itself:
+The JSON shape is versioned separately from the package version:
 
 | Field | Meaning |
 | :--- | :--- |
-| `schema` | `unmasker.scan/1` for one file, `unmasker.survey/1` for a folder. The two carry different keys and this is what tells them apart |
-| `version` | which build wrote the document — a different question from which shape it is |
-| `searched` | `false` means there was nothing to search, not that the search came back empty |
+| `schema` | `unmasker.scan/1` for one file or `unmasker.survey/1` for a folder |
+| `version` | the unmasker build that produced the report |
+| `searched` | `false` means there was nothing to search, not that a search came back empty |
+
+```bash
+unmasker tests/specimens/pdf/libreoffice-writer-image-over-text.pdf --json
+```
 
 ```json
 {
   "tool": "unmasker",
   "schema": "unmasker.scan/1",
   "version": "0.1.0",
-  "file": "leaked.pdf",
+  "file": "tests/specimens/pdf/libreoffice-writer-image-over-text.pdf",
   "kind": "pdf",
   "searched": true,
-  "remarks": ["…"],
+  "remarks": [
+    "the file says it was made by Creator Writer; Producer LibreOffice 24.2, and dates itself CreationDate 2026-08-31T23:50:46Z"
+  ],
   "findings": [
     {
-      "detector": "covered-text",
+      "detector": "text-under-image",
       "basis": "direct",
-      "summary": "22 characters under a black shape at x 117.5-268.7, y 684.2-698.5; the rest of the line still reads \"Name:\"",
-      "human_sees": "██████████████████████",
-      "machine_reads": "Wanda Testowa-Przyklad",
-      "location": { "page": 1 },
-      "codepoints": ["U+0057", "U+0061", "…"]
+      "summary": "22 characters under an image at x 123.3-245.9, y 702.8-720.0; an image over a text layer is also what a scan of a printed page looks like, and there the two normally agree; the rest of the line still reads \"Subject:\"",
+      "human_sees": "▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒",
+      "machine_reads": "Ludmila Wieczorek-Test",
+      "location": {
+        "page": 1
+      },
+      "codepoints": [
+        "U+004C",
+        "U+0075",
+        "U+0064",
+        "U+006D",
+        "U+0069",
+        "U+006C",
+        "U+0061",
+        "U+0020",
+        "U+0057",
+        "U+0069",
+        "U+0065",
+        "U+0063",
+        "U+007A",
+        "U+006F",
+        "U+0072",
+        "U+0065",
+        "U+006B",
+        "U+002D",
+        "U+0054",
+        "U+0065",
+        "U+0073",
+        "U+0074"
+      ]
     }
   ]
 }
 ```
 
-The field order is deliberate and is the order a consumer sees. `codepoints`
-carries every codepoint behind the finding rather than a sample, for the same
-reason nothing on the screen is truncated. A folder survey replaces `file` with
-`root` and nests the same per-file objects under `files`.
+The `/1` changes only when the JSON shape changes incompatibly. A normal
+package release does not force downstream consumers to guess whether their
+parser still works.
 
-The `/1` is what lets the shape change later without silently breaking anything
-built against it.
+## Design principles
+
+- **Evidence, not verdicts.** Report what can be shown and leave interpretation to the analyst.
+- **Absence is explicit.** Unreadable, unsearched and searched-with-no-findings are different states.
+- **Read-only.** Input files are never modified.
+- **Local.** No uploads and no network requests.
+- **Real specimens.** Detectors are tested against files produced by real applications, not only hand-built fixtures.
+- **No hidden ranking.** Findings are grouped by what was observed, not by an invented severity score.
+
+### What unmasker is not
+
+unmasker is not a malware scanner, DLP system, authenticity classifier or
+forensic verdict engine. It exposes discrepancies and residual content so a
+human or a downstream system can decide what they mean.
 
 ## How it is tested
 
-Every detector fires on a **committed specimen that a real producer wrote** —
-LibreOffice, headless Chrome, Ghostscript, tesseract, exiftool, ImageMagick.
-There are 32 of them and they are the test suite; each has a `.md` beside it
-recording which tool made it, what a human sees when it is opened, and what is
-actually inside.
+Every detector fires on a committed specimen written by a real producer,
+including LibreOffice, headless Chrome, Ghostscript, Tesseract, exiftool and
+ImageMagick. There are 32 of them and each has a provenance note describing how
+it was produced, what a person sees and what is actually stored inside.
 
-That discipline is not decoration. The first specimen disproved the design:
-LibreOffice draws a redaction bar as a polygon filled with `f*` and emits no
-`re` at all, so the rectangle-based detector the plan called for would have
-found **nothing** on the archetypal case — and a fixture built from the PDF
-specification would have hidden that behind a green test suite.
+This matters because real producers routinely disagree with assumptions made
+from a file-format specification. The first PDF specimen, for example, showed
+that LibreOffice represented a redaction bar differently from the shape the
+initial detector design expected.
 
-Where a specimen needs a measurement — where a bar goes, how wide a glyph is —
-it comes from **poppler**, not from this project's own code. A fixture measured
-with the tool under test proves only that the tool agrees with itself.
+Independent tooling such as Poppler is used where specimens need measurements,
+and detector behavior is mutation-tested so a broken rule has to break a test.
+The README is checked against the repository so the front page cannot silently
+drift away from the code: the detector list, the detector badge, the specimen
+count, the test count, and every example on this page - each command is run
+and its output compared to the block printed beneath it.
 
-Findings are also mutation-tested: each rule is broken on purpose and the suite
-has to notice. That has repeatedly found behaviour the docstrings claimed and
-nothing checked.
-
-The detector tables above are held against the source by
-[`tests/test_documented_detectors.py`](tests/test_documented_detectors.py):
-every slug the code can emit has to appear in a table, every slug in a table has
-to be one the code emits, and the badge has to agree with both. This document
-went stale once — it claimed 22 detectors against 25 — and a number beside a
-list does not keep itself true.
-
-716 tests.
+722 tests.
 
 ## Limits
 
-- **No verdicts.** It will not tell you a document was manipulated.
-- **No writing.** It never modifies the file it is given.
-- **No network.**
-- **Not every container.** Legacy OLE2 (`.doc`, `.xls`, `.ppt`) is unread, and
-  so is XMP outside a PDF. The sibling project `filetrail` reads several of
-  those and answers a different question with them — where a file came from.
-- **Not every producer.** Word and Acrobat are not on the machine this was
-  built on, and two producers never agree about everything.
-  [`tests/specimens/README.md`](tests/specimens/README.md) keeps the current
-  list of what is untested and why.
+- No verdicts about whether a document was manipulated or malicious.
+- No writing to the input file and no network access.
+- Legacy OLE2 formats such as `.doc`, `.xls` and `.ppt` are not supported.
+- XMP outside PDF is not currently read.
+- Producer coverage is not universal. Microsoft Word and Adobe Acrobat are not part of the current specimen corpus, and different producers can encode the same feature differently.
+- OCR is optional, slower than structural detection and depends on external tools.
+
+See [`tests/specimens/README.md`](tests/specimens/README.md) for the current
+producer coverage and explicitly documented gaps.
 
 ## Development
 
@@ -477,21 +558,15 @@ python3 -m venv .venv
 .venv/bin/pip install -e ".[dev]"
 .venv/bin/pytest
 .venv/bin/ruff check .
+.venv/bin/mypy
 ```
 
-`ruff check .`, and **not** `ruff format --check .`. This project lints and does
-not auto-format: the report layout, the specimens' XML and the docstrings are
-placed deliberately, and a formatter run at publication time would rewrite a
-dozen files nobody asked it to. CI asserts the standard the project actually
-holds.
+Project references:
 
-- [`CONTRIBUTING.md`](CONTRIBUTING.md) — the rules this project works to, each
-  one named after the failure that produced it
-- [`SECURITY.md`](SECURITY.md) — what to do about a finding in this tool itself
-- [`CHANGELOG.md`](CHANGELOG.md) — what changed, and when
-- [`tests/specimens/README.md`](tests/specimens/README.md) — the specimens, what
-  each proves, and the gaps that are named rather than hidden
-- the sibling project's design notes — the design language this report follows
+- [`CONTRIBUTING.md`](CONTRIBUTING.md) - development and specimen rules
+- [`SECURITY.md`](SECURITY.md) - security policy and threat model
+- [`CHANGELOG.md`](CHANGELOG.md) - release history
+- [`tests/specimens/README.md`](tests/specimens/README.md) - specimen provenance and coverage gaps
 
 ## License
 
@@ -501,7 +576,7 @@ Apache License 2.0.
 
 <div align="center">
 
-**Unmasker**
+**unmasker**
 
 *What a human sees in a document, against what a machine reads out of it.*
 
