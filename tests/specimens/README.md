@@ -54,6 +54,7 @@ which RFC 2606 reserves for the purpose.
 | [`docx/libreoffice-writer-embedded-sheet.docx`](docx/libreoffice-writer-embedded-sheet.md) | LibreOffice 24.2 Writer | a summary with a small table pictured in it | the whole workbook behind the picture, as `word/embeddings/oleObject1.xlsx` |
 | [`odt/libreoffice-writer-embedded-sheet.odt`](odt/libreoffice-writer-embedded-sheet.md) | LibreOffice 24.2 Writer | the same summary | the same workbook, as the sub-package `Object 1/` |
 | [`pdf/pypdf-incremental-page-removed.pdf`](pdf/pypdf-incremental-page-removed.md) | LibreOffice 24.2, pypdf 6.16 | a one-page award notice | an earlier revision holding the annex that was deleted, reserve price and all |
+| [`doc/libreoffice-writer-word97.doc`](doc/libreoffice-writer-word97.md) | LibreOffice 24.2 Writer, exported to Word 97 | an award notice naming nobody | two names, a title marked *do not circulate* and a company, in the compound file's property streams |
 
 Every specimen that hides text *on the page* is also found by `--ocr`, which
 renders the page and reads the picture back and knows none of the mechanisms —
@@ -181,6 +182,13 @@ Named here so their absence is not mistaken for coverage:
   the spreadsheet's `w:rPrChange`.
 - **Excel and Word themselves.** Neither is on this machine, so every OOXML
   file here was written by LibreOffice.
+- **The `WordDocument` stream**, and with it every legacy format's text. The
+  compound-file container is read and both property streams with it; the binary
+  document formats inside - Word's piece table, Excel's BIFF records - are
+  each a separate problem of their own size and none is solved. The report says
+  a legacy file's text *was not read* rather than that it has none, and no
+  metadata value in one is called undisclosed, because nothing compared it
+  against a page.
 - **PowerPoint itself**, and a presentation comment (`ppt/comments/`), which
   LibreOffice does not write. Decks were the one gap here that no amount of
   code could close - nothing on this machine could write one until

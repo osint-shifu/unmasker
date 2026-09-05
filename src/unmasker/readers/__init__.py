@@ -12,6 +12,7 @@ from pathlib import Path
 
 from .docx import read_docx
 from .image import read_image
+from .legacy import read_legacy
 from .model import Extraction, TextUnit, UnreadableFile
 from .odf import read_odf
 from .pdf import read_pdf
@@ -129,6 +130,8 @@ def read(path: str | Path) -> Extraction:
 def _dispatch(path: Path, head: bytes) -> Extraction:
     if head.startswith(b"%PDF-"):
         return read_pdf(path)
+    if head.startswith(b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"):
+        return read_legacy(path)
     if head.startswith(b"\xff\xd8\xff"):
         return read_image(path)
     if head.startswith(b"PK\x03\x04"):

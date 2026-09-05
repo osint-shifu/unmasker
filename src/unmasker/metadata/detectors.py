@@ -293,14 +293,20 @@ def describe(metadata: Metadata) -> list[str]:
     return [f"the file {', and '.join(parts)}"]
 
 
-def detect(metadata: Metadata, text: str) -> list[Finding]:
+def detect(metadata: Metadata, text: str, *, comparable: bool = True) -> list[Finding]:
     """Every metadata finding, given what the document itself shows.
 
     `text` is the document's own text, and it is what makes these findings
     about a *gap* rather than a dump of the Info dictionary.
+
+    `comparable` is false where the document has text that was not read. Then
+    there is no gap to report - not because the value is shown, but because
+    nothing looked - and `undisclosed` is skipped rather than firing on every
+    field. The remaining detectors do not compare against the text and are
+    unaffected.
     """
     return (
-        undisclosed(metadata, text)
+        (undisclosed(metadata, text) if comparable else [])
         + paths(metadata, text)
         + conflicts(metadata, text)
         + disagreements(metadata, text)

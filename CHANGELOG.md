@@ -9,6 +9,59 @@ release: `unmasker.scan/1` for one file, `unmasker.survey/1` for a folder. A
 consumer should read that rather than the release number, because the release
 moves whenever anything does and the schema moves only when the shape changes.
 
+## [0.2.0] - 2026-09-05
+
+A minor version because a whole family of file formats is readable that was
+not. The runtime dependency count is unchanged, and stays one.
+
+### Added
+
+- **Compound files.** `.doc`, `.xls` and `.ppt` are each a FAT filesystem in a
+  single file, with a second smaller filesystem nested inside for streams below
+  a cutoff. Nothing in the standard library reads one, so `unmasker.ole2` does:
+  header, DIFAT, FAT, directory tree, mini FAT and mini stream, every chain
+  cycle-checked and every offset bounds-checked, because this reads files
+  somebody else wrote and some of them are wrong on purpose.
+- **Property sets.** Both streams every Office application has written since
+  1997 - title, author, company, keywords, revision count, timestamps -
+  including the user-defined section, whose names are not numbers but entries
+  in a dictionary the file carries.
+- A specimen, and a Word 97 document is now dispatched by its signature.
+
+### Three things that came from a real file rather than the specification
+
+- **Every stream in an ordinary Word document is under the 4096-byte cutoff**,
+  so all of them live in the mini stream. A reader that did full sectors first
+  and left the small ones for later would read *nothing at all* from a genuine
+  file while passing a suite built the same way it was. That is the HEIC
+  failure exactly, and the specimen was read before the reader was written for
+  precisely that reason.
+- **The code page is declared by the file**, in property 1, and LibreOffice
+  writes 65001. Assuming the specification's usual CP1252 is right for ASCII
+  and wrong for every name with a diacritic in it.
+- **Company is not property 15 of DocumentSummaryInformation.** LibreOffice
+  writes it into a second section under `FMTID_UserDefinedProperties`. A reader
+  built to the specification finds nothing there.
+
+### The text is not read, and the report says so
+
+The binary formats inside - Word's piece table, Excel's BIFF records - are each
+a separate problem of their own size and none is solved here.
+
+- `Extraction` gained `text_unread`: this file has a text layer that was not
+  read, which is not the same as having none. A photograph has no text, so a
+  metadata value genuinely appears nowhere in it; a `.doc` has text nobody
+  looked at.
+- `undisclosed-metadata` is therefore not run on one. Every field is absent
+  from a text that was never read, and reporting six findings saying the
+  document does not show values nobody asked it about would be the tool
+  claiming a gap it did not look for.
+- What the file says about itself is put in front of the reader as a remark
+  instead, qualified as not compared. A value this tool read and mentioned to
+  nobody would be the worst of both answers.
+- The report's closing line says *this file's text was not read, so it was not
+  searched*, rather than borrowing the sentence written for a photograph.
+
 ## [0.1.12] - 2026-09-05
 
 ### Fixed
@@ -313,6 +366,7 @@ First release.
   out of the entropy-coded data, reporting a picture the size of noise. It now
   stops at `SOS`/`EOI` the way `_segments()` already did.
 
+[0.2.0]: https://github.com/osint-shifu/unmasker/releases/tag/v0.2.0
 [0.1.12]: https://github.com/osint-shifu/unmasker/releases/tag/v0.1.12
 [0.1.11]: https://github.com/osint-shifu/unmasker/releases/tag/v0.1.11
 [0.1.10]: https://github.com/osint-shifu/unmasker/releases/tag/v0.1.10

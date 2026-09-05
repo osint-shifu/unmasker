@@ -156,6 +156,10 @@ def _collect(extraction, ocr: bool = False, *, descend: bool = True) -> list[Fin
     # so the detector is given the document's own text to compare against.
     if extraction.metadata is not None:
         shown = "\n".join(unit.text for unit in extraction.units)
-        found.extend(detect_metadata(extraction.metadata, shown))
+        found.extend(
+            detect_metadata(
+                extraction.metadata, shown, comparable=not extraction.text_unread
+            )
+        )
 
     return sorted(found, key=lambda f: f.location.sort_key)

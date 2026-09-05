@@ -150,6 +150,11 @@ def _entry(style: Style, finding: Finding, label_width: int) -> list[str]:
 
 def _searched(extraction: Extraction) -> str:
     """What was actually looked at. Never a claim that outruns the reading."""
+    if getattr(extraction, "text_unread", False):
+        # Not the same sentence as the one below. This file has text; it was
+        # not read. Printing "no text layer" would be the report making the
+        # confusion the rest of the tool exists to prevent.
+        return "this file's text was not read, so it was not searched"
     if not extraction.has_text:
         return "this file has no text layer to search"
     pages = [u.page for u in extraction.units if u.page is not None]

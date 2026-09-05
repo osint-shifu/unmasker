@@ -126,6 +126,15 @@ class Extraction:
     cannot carry tracked changes", the second is "it can and does not".
     """
 
+    text_unread: bool = False
+    """This file has a text layer that this tool did not read.
+
+    Not the same as having none. A photograph has no text, so a metadata value
+    genuinely appears nowhere in it; a legacy Word document has text this tool
+    cannot yet decode, and saying its metadata "appears nowhere in the text"
+    would be a claim about a comparison never made. The distinction the whole
+    report is built on, applied to itself."""
+
     earlier: tuple = ()
     """Earlier revisions this file still holds, as `Revision` records.
 
