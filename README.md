@@ -463,7 +463,7 @@ unmasker tests/specimens/pdf/libreoffice-writer-image-over-text.pdf --json
 {
   "tool": "unmasker",
   "schema": "unmasker.scan/1",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "file": "tests/specimens/pdf/libreoffice-writer-image-over-text.pdf",
   "sha256": "d324105840b72c0d76c491150fe9220eabb4a87a3735afdb5de5af4c27fa0b66",
   "kind": "pdf",
@@ -555,6 +555,7 @@ and its output compared to the block printed beneath it.
 - No verdicts about whether a document was manipulated or malicious.
 - No writing to the input file and no network access.
 - Legacy OLE2 formats such as `.doc`, `.xls` and `.ppt` are not supported.
+- Signature coverage is not checked. A signed PDF's `/ByteRange` says which bytes it covers, and no signed specimen could be produced to test a detector against.
 - XMP is read in PDF and JPEG. DOCX and TIFF carry packets too and are not read yet.
 - Producer coverage is not universal. Microsoft Word and Adobe Acrobat are not part of the current specimen corpus, and different producers can encode the same feature differently.
 - OCR is optional, slower than structural detection and depends on external tools.

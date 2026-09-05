@@ -122,6 +122,26 @@ Named here so their absence is not mistaken for coverage:
   by a producer.
 - **Producers not on this machine.** Acrobat and Word draw their own way, and
   LibreOffice and Chrome already disagree with each other.
+- **A signed PDF**, and with it the whole question of signature coverage. A
+  signature's `/ByteRange` names the bytes it covers, and a file longer than
+  that range has been appended to since it was signed - which is a strong,
+  entirely deterministic finding and the natural companion to
+  `earlier-revision`. Nothing here can sign one: `pdfsig` only verifies, pypdf
+  does not sign, and LibreOffice needs an NSS certificate database that this
+  machine has no `certutil` to build. The detector is **not written**, because
+  a detector whose only fixture was assembled from the specification is the
+  mistake this file exists to prevent.
+- **A document set in a font that postdates it.** A typeface has a first
+  release, so a file dating itself before one it uses is saying two things that
+  cannot both be true - the reasoning `SecurityRonin/font-provenance` collects
+  the evidence for. It is deliberately **not implemented**: the anchors that
+  matter are Calibri, Aptos and DengXian, none of which is installed on this
+  machine, so the only anchor testable here would be one nobody backdates a
+  document with. A table of dates that fires on real documents while every
+  tested case is irrelevant is the HEIC failure again, with the added risk of
+  being confidently wrong rather than merely silent. It needs the fonts, or it
+  needs a cited source per anchor, and until then the absence is the honest
+  state.
 - **An annotation carrying an appearance stream.** Comments now have a
   specimen, but `/AP` is where a bar drawn as an annotation would live, and no
   producer here writes one — LibreOffice draws its shapes into the content

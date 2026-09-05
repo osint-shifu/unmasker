@@ -9,6 +9,30 @@ release: `unmasker.scan/1` for one file, `unmasker.survey/1` for a folder. A
 consumer should read that rather than the release number, because the release
 moves whenever anything does and the schema moves only when the shape changes.
 
+## [0.1.10] - 2026-09-05
+
+### Changed
+
+- Two things this tool does not check are now named where their absence would
+  otherwise pass for coverage.
+
+  **Signature coverage.** A signed PDF's `/ByteRange` says which bytes it
+  covers, and a file longer than that range has been appended to since it was
+  signed - the natural companion to `earlier-revision` and entirely
+  deterministic. No detector is written, because nothing available can produce
+  a signed specimen: `pdfsig` only verifies, pypdf does not sign, and
+  LibreOffice needs a certificate database this machine has no tooling to
+  build. A detector whose only fixture came from the specification is the
+  mistake the specimen corpus exists to prevent.
+
+  **Font anachronism.** A typeface has a first release, so a document dating
+  itself before a font it uses states two things that cannot both be true. Not
+  implemented on purpose: the anchors worth having are Calibri, Aptos and
+  DengXian, none installed here, so every testable case would be one nobody
+  backdates a document with - a table that fires on real files while every
+  tested case is irrelevant, which is worse than silence because it can be
+  confidently wrong.
+
 ## [0.1.9] - 2026-09-05
 
 ### Added
@@ -244,6 +268,7 @@ First release.
   out of the entropy-coded data, reporting a picture the size of noise. It now
   stops at `SOS`/`EOI` the way `_segments()` already did.
 
+[0.1.10]: https://github.com/osint-shifu/unmasker/releases/tag/v0.1.10
 [0.1.9]: https://github.com/osint-shifu/unmasker/releases/tag/v0.1.9
 [0.1.8]: https://github.com/osint-shifu/unmasker/releases/tag/v0.1.8
 [0.1.7]: https://github.com/osint-shifu/unmasker/releases/tag/v0.1.7
