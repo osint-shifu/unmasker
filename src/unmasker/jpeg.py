@@ -69,6 +69,7 @@ class Jpeg:
     size: Size | None = None
     thumbnail: bytes | None = None
     thumbnail_size: Size | None = None
+    xmp: bytes | None = None
     remarks: tuple[str, ...] = ()
 
     @property
@@ -187,6 +188,28 @@ def _thumbnail_from_exif(exif: bytes) -> bytes | None:
     return None
 
 
+XMP_PREFIX = b"http://ns.adobe.com/xap/1.0/\x00"
+
+
+def _xmp_packet(data: bytes) -> bytes | None:
+    """The XMP packet from its own APP1 segment, if the file carries one.
+
+    A photograph states its metadata in as many places as a PDF does - EXIF in
+    one APP1 segment, XMP in another - and nothing in the format makes the two
+    agree. The packet is returned raw, for the same reason the PDF reader
+    returns it raw: it is RDF, and the parsing that matters is in `xmp.py`.
+
+    An extended packet, split across segments and pointed at by
+    `xmpNote:HasExtendedXMP`, is not reassembled. Editors write the history
+    into the main packet; the extended one carries what would not fit, which
+    is usually a thumbnail.
+    """
+    for marker, payload in _segments(data):
+        if marker == 0xE1 and payload.startswith(XMP_PREFIX):
+            return payload[len(XMP_PREFIX) :]
+    return None
+
+
 def read(data: bytes) -> Jpeg:
     """A JPEG's own account of its size and of the preview it carries."""
     if not data.startswith(b"\xff\xd8"):
@@ -215,5 +238,6 @@ def read(data: bytes) -> Jpeg:
         size=size,
         thumbnail=thumbnail,
         thumbnail_size=thumbnail_size,
+        xmp=_xmp_packet(data),
         remarks=tuple(remarks),
     )

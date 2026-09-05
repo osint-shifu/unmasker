@@ -131,6 +131,11 @@ class Metadata:
     fields: tuple[Field, ...] = ()
     remarks: tuple[str, ...] = field(default_factory=tuple)
 
+    container: str = ""
+    """Which reader produced this, where a report would otherwise name a
+    structure the file does not have. A JPEG has no Info dictionary, and
+    saying its history outlived one is a claim about nothing."""
+
     history: tuple = ()
     """`xmpMM:History` events, for files that carry an XMP packet. An edit
     trail rather than a property: who touched a file and when is one fact about
@@ -211,7 +216,27 @@ def read_pdf(reader) -> Metadata:
         history = tuple(events)
         remarks.extend(problems)
 
-    return Metadata(fields=tuple(found), remarks=tuple(remarks), history=history)
+    return Metadata(
+        fields=tuple(found), remarks=tuple(remarks), history=history, container="pdf"
+    )
+
+
+def read_xmp(packet: bytes) -> Metadata:
+    """A metadata record from an XMP packet on its own.
+
+    Containers other than PDF carry the same packet and no Info dictionary
+    beside it, so there is nothing here to disagree with - which is why this
+    is a separate entry point rather than `read_pdf` with the other half
+    missing. The finding a PDF can make, that its two accounts of itself
+    differ, is not available here and must not be implied.
+    """
+    fields, events, problems = parse_xmp(packet)
+    return Metadata(
+        fields=tuple(fields),
+        remarks=tuple(problems),
+        history=tuple(events),
+        container="xmp",
+    )
 
 
 def _xmp_packet(reader) -> tuple[bytes, list[str]]:

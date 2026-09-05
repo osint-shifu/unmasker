@@ -162,7 +162,7 @@ Exit status is part of the interface:
 | Word / ODT | tracked deletions, comments, revision history, metadata leaks |
 | Excel / Calc | hidden sheets, rows and columns, filtered rows, tracked cell changes |
 | PowerPoint / Impress | hidden slides and speaker notes |
-| JPEG | stale EXIF thumbnails that can preserve content removed by cropping |
+| JPEG | stale EXIF thumbnails that can preserve content removed by cropping, and the XMP edit history an editor left behind |
 | Metadata | undisclosed values, local filesystem paths and conflicting metadata copies |
 | OCR comparison | text present in the file but absent from the rendered page, and the reverse |
 
@@ -453,7 +453,7 @@ unmasker tests/specimens/pdf/libreoffice-writer-image-over-text.pdf --json
 {
   "tool": "unmasker",
   "schema": "unmasker.scan/1",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "file": "tests/specimens/pdf/libreoffice-writer-image-over-text.pdf",
   "kind": "pdf",
   "searched": true,
@@ -522,7 +522,7 @@ human or a downstream system can decide what they mean.
 
 Every detector fires on a committed specimen written by a real producer,
 including LibreOffice, headless Chrome, Ghostscript, Tesseract, exiftool and
-ImageMagick. There are 32 of them and each has a provenance note describing how
+ImageMagick. There are 34 of them and each has a provenance note describing how
 it was produced, what a person sees and what is actually stored inside.
 
 This matters because real producers routinely disagree with assumptions made
@@ -537,14 +537,14 @@ drift away from the code: the detector list, the detector badge, the specimen
 count, the test count, and every example on this page - each command is run
 and its output compared to the block printed beneath it.
 
-725 tests.
+728 tests.
 
 ## Limits
 
 - No verdicts about whether a document was manipulated or malicious.
 - No writing to the input file and no network access.
 - Legacy OLE2 formats such as `.doc`, `.xls` and `.ppt` are not supported.
-- XMP outside PDF is not currently read.
+- XMP is read in PDF and JPEG. DOCX and TIFF carry packets too and are not read yet.
 - Producer coverage is not universal. Microsoft Word and Adobe Acrobat are not part of the current specimen corpus, and different producers can encode the same feature differently.
 - OCR is optional, slower than structural detection and depends on external tools.
 

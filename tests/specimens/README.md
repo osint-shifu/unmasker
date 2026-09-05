@@ -48,6 +48,8 @@ which RFC 2606 reserves for the purpose.
 | [`jpeg/imagemagick-stale-thumbnail.jpg`](jpeg/imagemagick-stale-thumbnail.md) | ImageMagick, exiftool 12.76 | a cropped photograph | the preview it was cropped from, still spelling the witness name |
 | [`jpeg/imagemagick-thumbnail-regenerated.jpg`](jpeg/imagemagick-thumbnail-regenerated.md) | ImageMagick, exiftool 12.76 | the same crop | nothing — control |
 | [`jpeg/imagemagick-no-thumbnail.jpg`](jpeg/imagemagick-no-thumbnail.md) | ImageMagick | the photograph before the crop | nothing, and a note saying there was no preview to compare — control |
+| [`jpeg/exiftool-xmp-history.jpg`](jpeg/exiftool-xmp-history.md) | ImageMagick, exiftool 12.x | a flat panel with one word on it | an XMP edit history naming an application, two timestamps and the document it was derived from |
+| [`jpeg/exiftool-xmp-absent.jpg`](jpeg/exiftool-xmp-absent.md) | ImageMagick | the same panel | nothing, and no packet to read — control |
 
 Every specimen that hides text *on the page* is also found by `--ocr`, which
 renders the page and reads the picture back and knows none of the mechanisms —
@@ -107,7 +109,9 @@ Named here so their absence is not mistaken for coverage:
 - **A true PDF shading.** Both LibreOffice and Chrome flatten a gradient before
   it reaches the file — LibreOffice into dozens of solid strips, Chrome into a
   single fill — so no producer here emits `sh` at all.
-- **XMP outside a PDF.** DOCX, JPEG and TIFF carry packets too.
+- **XMP in a DOCX or a TIFF.** JPEG is covered by
+  `exiftool-xmp-history.jpg`; those two containers carry packets as well and
+  no file here holds one.
 - **An angle other than 0 or 90 degrees**, and text rotated by a page's
   `/Rotate` entry rather than by the content stream. The grouping is general -
   it projects onto the text direction - but only the right angle is exercised

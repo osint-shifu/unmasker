@@ -256,8 +256,12 @@ def revision_history(metadata: Metadata, text: str) -> list[Finding]:
                 f"the XMP packet records {len(events)} event"
                 f"{'' if len(events) == 1 else 's'} in this file's history: "
                 + "; ".join(events)
-                + ". It is the file's own account, and it survives a scrub of "
-                "the Info dictionary"
+                + ". It is the file's own account, and it outlives the "
+                + (
+                    "Info dictionary, which is where anybody checking will look"
+                    if metadata.container == "pdf"
+                    else "other places this file states things about itself"
+                )
             ),
             human_sees="",
             machine_reads=", ".join(dict.fromkeys(tools)) or "; ".join(events),

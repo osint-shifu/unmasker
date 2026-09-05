@@ -338,3 +338,37 @@ def test_a_pdf_with_no_packet_at_all_yields_nothing_and_says_nothing():
     meta = meta_of(SPECIMENS / "pdf" / "libreoffice-writer-black-bars.pdf")
     assert all(entry.part == "/Info" for entry in meta.fields)
     assert not any("XMP" in remark for remark in meta.remarks)
+
+
+# XMP outside a PDF. The packet is the same; only the container changed, and
+# until now only one container was read. A photograph carries the edit history
+# an editor wrote into it, and the picture says none of it.
+
+PHOTOGRAPH = SPECIMENS / "jpeg" / "exiftool-xmp-history.jpg"
+BARE = SPECIMENS / "jpeg" / "exiftool-xmp-absent.jpg"
+
+
+def test_a_photograph_carries_its_xmp_packet_into_the_report():
+    from unmasker.readers import read
+
+    extraction = read(PHOTOGRAPH)
+    assert extraction.metadata is not None, "the JPEG's XMP packet was not read"
+    names = {field.name for field in extraction.metadata.fields}
+    assert any("DerivedFrom" in name for name in names), sorted(names)
+
+
+def test_a_photographs_edit_history_is_read_the_way_a_pdfs_is():
+    from unmasker.readers import read
+
+    extraction = read(PHOTOGRAPH)
+    history = extraction.metadata.history
+    assert [event.action for event in history] == ["derived", "saved"]
+    assert all("Photoshop" in event.software for event in history)
+
+
+def test_a_photograph_with_no_packet_says_so_rather_than_inventing_one():
+    """The control. A reader that fires on every photograph is worse than none."""
+    from unmasker.readers import read
+
+    extraction = read(BARE)
+    assert extraction.metadata is None or not extraction.metadata.fields

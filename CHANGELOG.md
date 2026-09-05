@@ -9,6 +9,27 @@ release: `unmasker.scan/1` for one file, `unmasker.survey/1` for a folder. A
 consumer should read that rather than the release number, because the release
 moves whenever anything does and the schema moves only when the shape changes.
 
+## [0.1.5] - 2026-09-05
+
+### Added
+
+- XMP is read from JPEG. The packet is the same one a PDF carries and the
+  parsing was already a separate module; only one container was being handed
+  to it. What an editor writes there is usually `xmpMM:History` - what the file
+  was derived from, which application touched it, and when - and none of it is
+  on the picture. `unmasker` reported a photograph's preview and nothing else
+  until now.
+- Two specimens for it, written by exiftool: one carrying an edit history, and
+  a control carrying no packet at all, so the reader has a file it must stay
+  silent on.
+
+### Fixed
+
+- The revision-history finding told every file its history "survives a scrub of
+  the Info dictionary". A JPEG has no Info dictionary, and naming a structure
+  the file does not have is a claim about nothing. Metadata now records which
+  container it was read from and the sentence follows it.
+
 ## [0.1.4] - 2026-09-05
 
 ### Changed
@@ -129,6 +150,7 @@ First release.
   out of the entropy-coded data, reporting a picture the size of noise. It now
   stops at `SOS`/`EOI` the way `_segments()` already did.
 
+[0.1.5]: https://github.com/osint-shifu/unmasker/releases/tag/v0.1.5
 [0.1.4]: https://github.com/osint-shifu/unmasker/releases/tag/v0.1.4
 [0.1.3]: https://github.com/osint-shifu/unmasker/releases/tag/v0.1.3
 [0.1.2]: https://github.com/osint-shifu/unmasker/releases/tag/v0.1.2

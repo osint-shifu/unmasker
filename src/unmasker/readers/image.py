@@ -16,6 +16,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from ..jpeg import read as read_jpeg
+from ..metadata import read_xmp
 from .model import Extraction, UnreadableFile
 
 
@@ -43,4 +44,19 @@ def read_image(path: Path) -> Extraction:
     if not jpeg.has_thumbnail:
         remarks.append("this file carries no preview, so there was nothing to compare")
 
-    return Extraction(kind="image", units=(), remarks=tuple(remarks), source=path, image=jpeg)
+    # XMP is not a PDF thing. An editor writes the same packet into a
+    # photograph, and what it writes there is usually an edit history: what
+    # this file came from, which application touched it, when. None of it is
+    # on the picture.
+    metadata = read_xmp(jpeg.xmp) if jpeg.xmp else None
+    if metadata is not None:
+        remarks.extend(metadata.remarks)
+
+    return Extraction(
+        kind="image",
+        units=(),
+        remarks=tuple(remarks),
+        source=path,
+        image=jpeg,
+        metadata=metadata,
+    )
