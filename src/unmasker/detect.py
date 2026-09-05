@@ -21,6 +21,7 @@ from .revisions import detect as detect_revisions
 from .sheets import detect as detect_sheets
 from .slides import detect as detect_slides
 from .text.invisible import scan_text
+from .thumbnails import detect as detect_thumbnails
 
 
 def collect(extraction, ocr: bool = False) -> list[Finding]:
@@ -60,6 +61,16 @@ def collect(extraction, ocr: bool = False) -> list[Finding]:
     # that was never on the screen at all.
     if extraction.slides is not None:
         found.extend(detect_slides(extraction.slides))
+
+    # A photograph, against the smaller photograph inside it. The shape
+    # comparison is free; reading the preview back costs an OCR pass and waits
+    # for --ocr, like everything else that renders.
+    if extraction.image is not None and extraction.source is not None:
+        pictured, problems = detect_thumbnails(extraction.source, extraction.image, ocr=ocr)
+        found.extend(pictured)
+        extraction = dataclasses.replace(
+            extraction, remarks=extraction.remarks + tuple(problems)
+        )
 
     # Reading each page back costs a render and an OCR pass - seconds a page -
     # and needs two external binaries, which is why it was kept out

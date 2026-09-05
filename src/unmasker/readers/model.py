@@ -82,6 +82,14 @@ class Extraction:
     Typed loosely so the model does not have to know about PDF or OOXML.
     """
 
+    image: object | None = None
+    """A `Jpeg` record for readers that can see a picture, else None.
+
+    The one container with no text in it at all, which is why `units` is empty
+    and `has_text` is false: a photograph was not searched, and the report has
+    to be able to say so rather than call it clean.
+    """
+
     slides: object | None = None
     """A `SlideRecord` for readers that can see a deck, else None.
 

@@ -9,6 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from .docx import read_docx
+from .image import read_image
 from .model import Extraction, TextUnit, UnreadableFile
 from .odf import read_odf
 from .pdf import read_pdf
@@ -28,6 +29,8 @@ def read(path: str | Path) -> Extraction:
 
     if head.startswith(b"%PDF-"):
         return read_pdf(path)
+    if head.startswith(b"\xff\xd8\xff"):
+        return read_image(path)
     if head.startswith(b"PK\x03\x04"):
         # Every OOXML and ODF file is a zip. Which one it is depends on what is
         # inside, so the contents decide - not the extension, which a forensic

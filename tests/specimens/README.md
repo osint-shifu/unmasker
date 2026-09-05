@@ -45,6 +45,8 @@ which RFC 2606 reserves for the purpose.
 | [`pdf/libreoffice-calc-clipped-overflow.pdf`](pdf/libreoffice-calc-clipped-overflow.md) | LibreOffice 24.2 Calc | two case notes that stop mid-word | the rest of each, clipped by a column boundary — and **nothing hidden** |
 | [`pptx/libreoffice-impress-hidden-slide.pptx`](pptx/libreoffice-impress-hidden-slide.md) | LibreOffice 24.2 Impress | a two-slide board review | a third slide that was cut, and a note the speaker was told not to say |
 | [`odp/libreoffice-impress-hidden-slide.odp`](odp/libreoffice-impress-hidden-slide.md) | LibreOffice 24.2 Impress | the same deck | the same two, behind a style instead of an attribute |
+| [`jpeg/imagemagick-stale-thumbnail.jpg`](jpeg/imagemagick-stale-thumbnail.md) | ImageMagick, exiftool 12.76 | a cropped photograph | the preview it was cropped from, still spelling the witness name |
+| [`jpeg/imagemagick-thumbnail-regenerated.jpg`](jpeg/imagemagick-thumbnail-regenerated.md) | ImageMagick, exiftool 12.76 | the same crop | nothing — control |
 
 Every specimen that hides text *on the page* is also found by `--ocr`, which
 renders the page and reads the picture back and knows none of the mechanisms —
