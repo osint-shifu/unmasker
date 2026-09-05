@@ -49,6 +49,7 @@ dev = ["pytest>=8.2,<9", "ruff>=0.6,<1", "mypy>=1.11,<2"]
 Homepage = "https://github.com/osint-shifu/unmasker"
 Repository = "https://github.com/osint-shifu/unmasker"
 Issues = "https://github.com/osint-shifu/unmasker/issues"
+Changelog = "https://github.com/osint-shifu/unmasker/blob/master/CHANGELOG.md"
 
 [project.scripts]
 unmasker = "unmasker.cli:main"

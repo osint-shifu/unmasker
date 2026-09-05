@@ -1,0 +1,70 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: pypi
+
+    # Trusted Publishing: PyPI verifies this workflow's identity over OIDC, so
+    # there is no API token to store, rotate or leak. `id-token: write` is what
+    # mints that identity and is the only permission this needs.
+    permissions:
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # A tag is a claim about which version is being released, and nothing
+      # else checks it. Tagging v0.2.0 against a pyproject that still says
+      # 0.1.0 publishes 0.1.0 under a tag that says otherwise, and PyPI will
+      # not let that file name be reused once it is wrong.
+      - name: The tag has to be the version being built
+        run: |
+          python - <<'CHECK'
+          import os, pathlib, re, sys
+
+          tag = os.environ["GITHUB_REF_NAME"]
+          text = pathlib.Path("pyproject.toml").read_text(encoding="utf-8")
+          declared = re.search(r'^version = "([^"]+)"', text, re.MULTILINE).group(1)
+
+          if tag != f"v{declared}":
+              sys.exit(f"tag {tag} does not match pyproject version {declared}")
+          print(f"{tag} matches pyproject {declared}")
+          CHECK
+
+      - name: Build
+        run: |
+          python -m pip install build twine
+          python -m build
+          twine check dist/*
+
+      # The same assertion CI makes on every push. It is repeated here because
+      # this is the artifact that actually reaches people, and a wheel missing
+      # its typing marker is invisible until somebody imports the package.
+      - name: The typing marker has to be inside the wheel
+        run: |
+          python - <<'CHECK'
+          import glob, zipfile
+          names = zipfile.ZipFile(glob.glob("dist/*.whl")[0]).namelist()
+          assert "unmasker/py.typed" in names, names
+          CHECK
+
+      # Install the built wheel in a clean interpreter and run the console
+      # script. Mypy passing is not the program running, and neither is a green
+      # test suite executed from a checkout.
+      - name: Install what was built and run it
+        run: |
+          python -m pip install dist/*.whl
+          unmasker --version
+
+      - uses: pypa/gh-action-pypi-publish@release/v1
