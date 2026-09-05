@@ -146,6 +146,10 @@ def render_file(path: Path, extraction: Extraction, findings: list[Finding]) -> 
         f"{_inline(count)}",
         "",
     ]
+    # The path says where; the digest says what. A report is forwarded, and
+    # its reader needs to be able to check the file against it.
+    if extraction.sha256:
+        lines += [f"`sha256 {_inline(extraction.sha256)}`", ""]
     lines += _findings(findings)
     lines += _notes(extraction.remarks)
     lines += ["---", "", _inline(_searched(extraction, findings)), "", f"unmasker {__version__}"]

@@ -233,6 +233,7 @@ def render_file(path: Path, extraction: Extraction, findings: list[Finding]) -> 
         + _findings(findings)
         + _notes(extraction.remarks)
         + f"<footer>{escape(_searched(extraction, findings))}<br>"
+        + (f"sha256 {escape(extraction.sha256)}<br>" if extraction.sha256 else "")
         + f"unmasker {escape(__version__)}</footer>"
     )
     return _document(f"unmasker — {path.name}", body)

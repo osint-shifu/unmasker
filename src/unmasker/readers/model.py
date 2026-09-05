@@ -71,6 +71,14 @@ class Extraction:
     cannot carry tracked changes", the second is "it can and does not".
     """
 
+    sha256: str = ""
+    """The digest of the bytes that were read.
+
+    A path is not a file. A report is something somebody is sent, and its
+    reader cannot otherwise tell whether the file in front of them is the one
+    it describes. Empty where the bytes were never read as a whole.
+    """
+
     source: object | None = None
     """The file this came from. Kept because reading a page back means
     rendering it again, and a renderer needs the file rather than the reading

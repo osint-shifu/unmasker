@@ -193,6 +193,10 @@ def main(argv: list[str] | None = None) -> int:
                 "schema": f"unmasker.scan/{SCHEMA}",
                 "version": __version__,
                 "file": str(args.file),
+                # The path says where this was read from; the digest says what
+                # was read. A consumer holding a file can check it is the one
+                # this report describes.
+                "sha256": extraction.sha256,
                 "kind": extraction.kind,
                 # The machine-readable half of "nothing found has two
                 # meanings". False here means there was nothing to search, not

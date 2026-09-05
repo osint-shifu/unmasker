@@ -464,3 +464,31 @@ def test_the_module_and_the_package_agree_on_the_version():
     )
     assert declared, "pyproject.toml no longer states a version"
     assert declared.group(1) == __version__
+
+
+def test_the_report_names_the_bytes_it_read_and_not_only_the_path(capsys):
+    """A path is not a file.
+
+    A report is something somebody is sent, and the reader of it has no way to
+    tell whether the file they are holding is the file it describes. The digest
+    ties the two together, so a finding can be re-derived by a third party
+    rather than taken on trust - which is the whole posture of this tool
+    applied to its own output.
+    """
+    import hashlib
+
+    specimen = SPECIMENS / "libreoffice-writer-black-bars.pdf"
+    _, out, _ = run(capsys, str(specimen), "--json")
+
+    expected = hashlib.sha256(specimen.read_bytes()).hexdigest()
+    assert json.loads(out)["sha256"] == expected
+
+
+def test_the_digest_is_shown_to_a_person_as_well(capsys):
+    """The JSON is for pipelines; the report is what gets forwarded."""
+    import hashlib
+
+    specimen = SPECIMENS / "libreoffice-writer-black-bars.pdf"
+    _, out, _ = run(capsys, str(specimen), "--width", "74")
+
+    assert hashlib.sha256(specimen.read_bytes()).hexdigest() in out

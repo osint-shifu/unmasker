@@ -230,6 +230,10 @@ def render(
     elif extraction.has_text:
         tail += ". Nothing hidden found by the detectors that exist"
     out.append(MARGIN + style.ink(tail + ".", MUTED))
+    # Whole, never shortened: a digest with a piece missing checks nothing, and
+    # the point of printing it is that somebody can re-derive it.
+    if extraction.sha256:
+        out.append(MARGIN + style.ink(f"sha256 {extraction.sha256}", FAINT))
     out.append("")
     return "\n".join(out)
 

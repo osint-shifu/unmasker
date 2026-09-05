@@ -70,6 +70,7 @@ unmasker tests/specimens/pdf/libreoffice-writer-black-bars.pdf
 
   ────────────────────────────────────────────────────────────────────────
   searched 1 page of 1. 4 findings in 1 kind.
+  sha256 fbaeef0d794f2bdb6f4c6bb823686a10d1e1b67e6b2d49df5fe33fd9a281f1a5
 ```
 
 Every finding says what a human sees, what a machine reads, where the mismatch
@@ -197,6 +198,7 @@ unmasker tests/specimens/pdf/libreoffice-writer-image-over-text.pdf
 
   ────────────────────────────────────────────────────────────────────────
   searched 1 page of 1. 1 finding in 1 kind.
+  sha256 d324105840b72c0d76c491150fe9220eabb4a87a3735afdb5de5af4c27fa0b66
 ```
 
 An image over text is also what a scan of a printed page looks like.
@@ -273,6 +275,7 @@ unmasker tests/specimens/xlsx/libreoffice-calc-hidden-columns.xlsx
 
   ────────────────────────────────────────────────────────────────────────
   searched the text of this file. 7 findings in 6 kinds.
+  sha256 6cb60d45c5e8fe7b2c05c1eee565ec417079909800f48209c88b28c42ec53c8e
 ```
 
 ### Case-folder triage
@@ -444,6 +447,7 @@ The JSON shape is versioned separately from the package version:
 | `schema` | `unmasker.scan/1` for one file or `unmasker.survey/1` for a folder |
 | `version` | the unmasker build that produced the report |
 | `searched` | `false` means there was nothing to search, not that a search came back empty |
+| `sha256` | the digest of the bytes that were read, so a finding can be checked against the file rather than the path |
 
 ```bash
 unmasker tests/specimens/pdf/libreoffice-writer-image-over-text.pdf --json
@@ -453,8 +457,9 @@ unmasker tests/specimens/pdf/libreoffice-writer-image-over-text.pdf --json
 {
   "tool": "unmasker",
   "schema": "unmasker.scan/1",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "file": "tests/specimens/pdf/libreoffice-writer-image-over-text.pdf",
+  "sha256": "d324105840b72c0d76c491150fe9220eabb4a87a3735afdb5de5af4c27fa0b66",
   "kind": "pdf",
   "searched": true,
   "remarks": [
@@ -537,7 +542,7 @@ drift away from the code: the detector list, the detector badge, the specimen
 count, the test count, and every example on this page - each command is run
 and its output compared to the block printed beneath it.
 
-728 tests.
+730 tests.
 
 ## Limits
 

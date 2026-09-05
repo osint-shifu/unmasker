@@ -6,6 +6,8 @@ a forensic tool that trusts a filename has already been fooled once.
 
 from __future__ import annotations
 
+import dataclasses
+import hashlib
 from pathlib import Path
 
 from .docx import read_docx
@@ -19,6 +21,23 @@ from .spreadsheet import odf_flavour, read_ods, read_xlsx
 
 __all__ = ["Extraction", "TextUnit", "UnreadableFile", "read"]
 
+def _digest(path: Path) -> str:
+    """sha256 of the file, read in blocks so a large one costs no memory.
+
+    Failure is empty rather than fatal: the digest annotates a report, and a
+    file that could be read for its contents and not for its bytes is a case
+    worth reporting anyway.
+    """
+    try:
+        block = hashlib.sha256()
+        with path.open("rb") as handle:
+            while chunk := handle.read(1 << 20):
+                block.update(chunk)
+        return block.hexdigest()
+    except OSError:
+        return ""
+
+
 def read(path: str | Path) -> Extraction:
     """Read `path` into text units, or raise `UnreadableFile`."""
     path = Path(path)
@@ -27,6 +46,12 @@ def read(path: str | Path) -> Extraction:
     except OSError as exc:
         raise UnreadableFile(f"cannot open {path}: {exc}") from exc
 
+    # Attached once here rather than in each reader, so a format added later
+    # cannot arrive without it.
+    return dataclasses.replace(_dispatch(path, head), sha256=_digest(path))
+
+
+def _dispatch(path: Path, head: bytes) -> Extraction:
     if head.startswith(b"%PDF-"):
         return read_pdf(path)
     if head.startswith(b"\xff\xd8\xff"):

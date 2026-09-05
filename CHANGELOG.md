@@ -9,6 +9,20 @@ release: `unmasker.scan/1` for one file, `unmasker.survey/1` for a folder. A
 consumer should read that rather than the release number, because the release
 moves whenever anything does and the schema moves only when the shape changes.
 
+## [0.1.6] - 2026-09-05
+
+### Added
+
+- Every single-file report names the sha256 of the bytes it read, in the
+  terminal, in `--html`, in `--md` and as a `sha256` field in `--json`. A path
+  says where a report was made; it does not say what was in the file, and the
+  person a report is forwarded to had no way to tell whether the document in
+  front of them was the one it describes. The digest is printed whole - a
+  shortened one checks nothing.
+
+  Computed once, in the dispatch every reader goes through, so a format added
+  later cannot arrive without it. A folder survey does not carry digests yet.
+
 ## [0.1.5] - 2026-09-05
 
 ### Added
@@ -150,6 +164,7 @@ First release.
   out of the entropy-coded data, reporting a picture the size of noise. It now
   stops at `SOS`/`EOI` the way `_segments()` already did.
 
+[0.1.6]: https://github.com/osint-shifu/unmasker/releases/tag/v0.1.6
 [0.1.5]: https://github.com/osint-shifu/unmasker/releases/tag/v0.1.5
 [0.1.4]: https://github.com/osint-shifu/unmasker/releases/tag/v0.1.4
 [0.1.3]: https://github.com/osint-shifu/unmasker/releases/tag/v0.1.3
