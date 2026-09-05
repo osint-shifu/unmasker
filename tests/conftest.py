@@ -52,6 +52,55 @@ class StubStream(Stub):
         return self._data
 
 
+#: A case folder, assembled from committed specimens rather than committed as a
+#: second copy of them.
+#:
+#: The files are still real producer output - that is what the aggregation is
+#: being tested against - and building the folder at test time avoids 800 KB of
+#: duplicates and the symlinks that would not survive the Windows CI job.
+#:
+#: Chosen so the survey has something to say in every section: files that hide
+#: something in three different containers, a control that must stay silent, a
+#: nested directory, a dotfile that must be skipped, and two files that cannot
+#: be read for two different reasons.
+CASE_FOLDER = {
+    "bids.xlsx": "xlsx/libreoffice-calc-hidden-columns.xlsx",
+    "minutes.pdf": "pdf/libreoffice-writer-black-bars.pdf",
+    "position-note.odt": "odf/libreoffice-writer-position-note.odt",
+    "clean.pdf": "pdf/libreoffice-writer-properly-redacted.pdf",
+    "sub/settlement.docx": "docx/libreoffice-writer-tracked-changes.docx",
+}
+
+
+@pytest.fixture
+def case_folder(tmp_path):
+    """A directory a survey can be run against, and what is in it."""
+    import shutil
+
+    for name, source in CASE_FOLDER.items():
+        target = tmp_path / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy(SPECIMENS / source, target)
+
+    # Two refusals, for two different reasons: one the tool recognises and
+    # explains, one it simply does not read. A real zip, because a broken one
+    # would be refused for being broken and would test nothing.
+    import zipfile
+
+    with zipfile.ZipFile(tmp_path / "deck.pptx", "w") as deck:
+        deck.writestr("[Content_Types].xml", "<Types/>")
+        deck.writestr("ppt/presentation.xml", "<presentation/>")
+    (tmp_path / "photo.jpg").write_bytes(b"\xff\xd8\xff\xe0\x00\x10JFIF\x00" * 4)
+
+    # Never walked into: a case folder under version control would otherwise
+    # have its whole object store surveyed.
+    (tmp_path / ".git").mkdir()
+    (tmp_path / ".git" / "config").write_text("[core]\n")
+    (tmp_path / ".hidden.pdf").write_bytes(b"%PDF-1.4 not really")
+
+    return tmp_path
+
+
 @pytest.fixture
 def form_resources():
     """A form XObject that draws a 10x10 square under its own doubling matrix."""
