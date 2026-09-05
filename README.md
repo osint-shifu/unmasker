@@ -453,7 +453,7 @@ unmasker tests/specimens/pdf/libreoffice-writer-image-over-text.pdf --json
 {
   "tool": "unmasker",
   "schema": "unmasker.scan/1",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "file": "tests/specimens/pdf/libreoffice-writer-image-over-text.pdf",
   "kind": "pdf",
   "searched": true,

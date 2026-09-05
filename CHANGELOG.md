@@ -9,6 +9,23 @@ release: `unmasker.scan/1` for one file, `unmasker.survey/1` for a folder. A
 consumer should read that rather than the release number, because the release
 moves whenever anything does and the schema moves only when the shape changes.
 
+## [0.1.3] - 2026-09-05
+
+### Fixed
+
+- `LICENSE` held a reflowed copy of the Apache License 2.0, about 4.4 KB short
+  of the canonical text and cut off at `END OF TERMS AND CONDITIONS`, with no
+  appendix. Automated licence detection could not match it, so GitHub reported
+  the project's licence as undetermined while the README badge, the package
+  metadata and the PyPI classifier all said Apache-2.0 - a claim on the surface
+  that the bytes underneath did not support, which is the thing this tool
+  exists to point out. Every wheel published so far carried the truncated file
+  as well.
+
+  Replaced with the canonical text, verified byte-for-byte against two
+  independent sources. The previous file contained no wording that is not in
+  it.
+
 ## [0.1.2] - 2026-09-05
 
 Documentation only, again. The description is the same file on both surfaces
@@ -88,6 +105,7 @@ First release.
   out of the entropy-coded data, reporting a picture the size of noise. It now
   stops at `SOS`/`EOI` the way `_segments()` already did.
 
+[0.1.3]: https://github.com/osint-shifu/unmasker/releases/tag/v0.1.3
 [0.1.2]: https://github.com/osint-shifu/unmasker/releases/tag/v0.1.2
 [0.1.1]: https://github.com/osint-shifu/unmasker/releases/tag/v0.1.1
 [0.1.0]: https://github.com/osint-shifu/unmasker/releases/tag/v0.1.0
