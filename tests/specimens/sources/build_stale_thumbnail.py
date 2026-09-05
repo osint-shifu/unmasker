@@ -62,7 +62,7 @@ def _run(*args: str) -> None:
     subprocess.run(args, check=True, capture_output=True)
 
 
-def build(target: Path, control: Path, workdir: Path | None) -> None:
+def build(target: Path, control: Path, bare: Path, workdir: Path | None) -> None:
     scratch = Path(workdir) if workdir else Path(tempfile.mkdtemp(prefix="unmasker-thumb-"))
     scratch.mkdir(parents=True, exist_ok=True)
 
@@ -100,6 +100,15 @@ def build(target: Path, control: Path, workdir: Path | None) -> None:
         WITNESS,
         str(full),
     )
+
+    # The second control, taken before any preview exists: most photographs on
+    # the web carry none, and their absence is not a finding about anything.
+    # Committed rather than built in the test, because a test that shells out
+    # to ImageMagick runs on no CI runner that has it - and on Windows finds
+    # the NTFS `convert` instead and fails outright.
+    bare.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy(full, bare)
+    print(f"wrote {bare} ({bare.stat().st_size} bytes)")
 
     # The preview a camera would have written, made from the whole frame.
     _run("convert", str(full), "-resize", "160x120", str(thumb))
@@ -140,9 +149,10 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("output", type=Path)
     parser.add_argument("control", type=Path)
+    parser.add_argument("bare", type=Path)
     parser.add_argument("--workdir", type=Path, default=None)
     args = parser.parse_args(argv)
-    build(args.output, args.control, args.workdir)
+    build(args.output, args.control, args.bare, args.workdir)
     return 0
 
 

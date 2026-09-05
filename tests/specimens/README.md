@@ -47,6 +47,7 @@ which RFC 2606 reserves for the purpose.
 | [`odp/libreoffice-impress-hidden-slide.odp`](odp/libreoffice-impress-hidden-slide.md) | LibreOffice 24.2 Impress | the same deck | the same two, behind a style instead of an attribute |
 | [`jpeg/imagemagick-stale-thumbnail.jpg`](jpeg/imagemagick-stale-thumbnail.md) | ImageMagick, exiftool 12.76 | a cropped photograph | the preview it was cropped from, still spelling the witness name |
 | [`jpeg/imagemagick-thumbnail-regenerated.jpg`](jpeg/imagemagick-thumbnail-regenerated.md) | ImageMagick, exiftool 12.76 | the same crop | nothing — control |
+| [`jpeg/imagemagick-no-thumbnail.jpg`](jpeg/imagemagick-no-thumbnail.md) | ImageMagick | the photograph before the crop | nothing, and a note saying there was no preview to compare — control |
 
 Every specimen that hides text *on the page* is also found by `--ocr`, which
 renders the page and reads the picture back and knows none of the mechanisms —

@@ -420,7 +420,7 @@ built against it.
 
 Every detector fires on a **committed specimen that a real producer wrote** —
 LibreOffice, headless Chrome, Ghostscript, tesseract, exiftool, ImageMagick.
-There are 31 of them and they are the test suite; each has a `.md` beside it
+There are 32 of them and they are the test suite; each has a `.md` beside it
 recording which tool made it, what a human sees when it is opened, and what is
 actually inside.
 
@@ -445,7 +445,7 @@ to be one the code emits, and the badge has to agree with both. This document
 went stale once — it claimed 22 detectors against 25 — and a number beside a
 list does not keep itself true.
 
-715 tests.
+716 tests.
 
 ## Limits
 

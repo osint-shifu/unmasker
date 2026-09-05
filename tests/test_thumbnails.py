@@ -37,6 +37,7 @@ SPECIMENS = Path(__file__).parent / "specimens" / "jpeg"
 
 STALE = SPECIMENS / "imagemagick-stale-thumbnail.jpg"
 REGENERATED = SPECIMENS / "imagemagick-thumbnail-regenerated.jpg"
+NO_THUMBNAIL = SPECIMENS / "imagemagick-no-thumbnail.jpg"
 
 CROPPED_AWAY = "WITNESS"
 
@@ -104,16 +105,25 @@ def test_a_regenerated_thumbnail_is_not_reported():
     assert by_detector(REGENERATED, "stale-thumbnail") == []
 
 
-def test_a_photograph_with_no_thumbnail_is_not_reported(tmp_path):
+def test_a_photograph_with_no_thumbnail_is_not_reported():
     """Most photographs on the web carry none, and their absence is not a
-    finding about anything."""
-    import subprocess
+    finding about anything.
 
-    bare = tmp_path / "bare.jpg"
-    subprocess.run(
-        ["convert", "-size", "400x300", "xc:white", str(bare)], check=True, capture_output=True
-    )
-    assert by_detector(bare, "stale-thumbnail") == []
+    Read from a committed specimen rather than built here. The first version
+    shelled out to ImageMagick, which no CI runner has - and on Windows finds
+    the NTFS `convert` instead and fails with exit status 4 rather than
+    skipping. CONTRIBUTING.md already names that failure once.
+    """
+    assert by_detector(NO_THUMBNAIL, "stale-thumbnail") == []
+
+
+def test_a_photograph_with_no_thumbnail_says_there_was_nothing_to_compare():
+    """The stronger half, and the one that matters: silence here has to mean
+    *there was nothing to compare*, not *compared and found nothing*. A reader
+    who cannot tell those apart has drawn a conclusion the tool never made."""
+    remarks = read(NO_THUMBNAIL).remarks
+
+    assert any("no preview" in remark for remark in remarks), remarks
 
 
 # --------------------------------------------------------------------------
