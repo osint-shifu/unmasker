@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import contextlib
 import io
+import json
 import re
 from pathlib import Path
 
@@ -100,6 +101,29 @@ def _pairs(text: str) -> list[tuple[str, str]]:
     return found
 
 
+def _as_written(text: str, argv: list[str]) -> str:
+    """Spell the paths the command was given the way the README spells them.
+
+    `file` is parsed as a Path, so Windows renders `tests/specimens/x.pdf`
+    back as `tests\\specimens\\x.pdf` - and inside `--json`, with the
+    separator escaped again. The README is written once, in the spelling most
+    of its readers will type.
+
+    Skipping the comparison on Windows instead would leave three of the nine
+    CI jobs checking nothing, which is how a separator cost this repository
+    those same three jobs once already.
+    """
+    for argument in argv:
+        native = str(Path(argument))
+        if native == argument:
+            continue
+        # The escaped form first: it contains the plain one.
+        text = text.replace(json.dumps(native)[1:-1], argument)
+        text = text.replace(native, argument)
+
+    return text
+
+
 def _run(command: str) -> str:
     """Run the command the README shows, and return what it printed."""
     stream = _Utf8()
@@ -110,7 +134,7 @@ def _run(command: str) -> str:
     with contextlib.redirect_stdout(stream):
         main(argv)
 
-    return stream.getvalue()
+    return _as_written(stream.getvalue(), argv)
 
 
 README_PAIRS = _pairs(README.read_text(encoding="utf-8"))
