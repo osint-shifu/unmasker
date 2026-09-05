@@ -21,10 +21,12 @@ htmlcov/
 # Only genuinely private material is excluded.
 private-samples/
 
-# Working notes, not documentation. HANDOFF.md is the running log of what was
-# tried and what it cost, and it names files from a sibling checkout that are
-# private. CONTRIBUTING.md is my rules for working in this repository. Neither
-# is something a reader of the published project needs, and the sibling project
-# tracks neither of its equivalents either.
+# Working notes, not documentation, and the only two files here that are not
+# published. HANDOFF.md is the running log of what was tried and what it cost,
+# and it names files in a sibling checkout that are private. CLAUDE.md is how
+# to work in this repository rather than what the tool does.
+#
+# CONTRIBUTING.md is tracked, deliberately: its rules are each named after the
+# failure that produced them, and that is worth publishing.
 HANDOFF.md
 CLAUDE.md
