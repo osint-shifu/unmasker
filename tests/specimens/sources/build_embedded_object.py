@@ -47,6 +47,7 @@ FODT = """<?xml version="1.0" encoding="UTF-8"?>
  xmlns:draw="urn:oasis:names:tc:opendocument:xmlns:drawing:1.0"
  xmlns:svg="urn:oasis:names:tc:opendocument:xmlns:svg-compatible:1.0"
  xmlns:table="urn:oasis:names:tc:opendocument:xmlns:table:1.0"
+ xmlns:style="urn:oasis:names:tc:opendocument:xmlns:style:1.0"
  office:version="1.3" office:mimetype="application/vnd.oasis.opendocument.text">
  <office:body><office:text>
   <text:p>{visible}</text:p>
@@ -56,8 +57,19 @@ FODT = """<?xml version="1.0" encoding="UTF-8"?>
     <draw:object>
      <office:document office:mimetype="application/vnd.oasis.opendocument.spreadsheet"
       office:version="1.3">
+      <office:automatic-styles>
+       <style:style style:name="hidden" style:family="table">
+        <style:table-properties table:display="false"/>
+       </style:style>
+      </office:automatic-styles>
       <office:body><office:spreadsheet>
-       <table:table table:name="Workings">
+       <table:table table:name="Summary">
+        <table:table-row>
+         <table:table-cell office:value-type="string"><text:p>Outcome</text:p></table:table-cell>
+         <table:table-cell office:value-type="string"><text:p>Awarded</text:p></table:table-cell>
+        </table:table-row>
+       </table:table>
+       <table:table table:name="Workings" table:style-name="hidden">
         <table:table-row>
          <table:table-cell office:value-type="string"><text:p>Reserve</text:p></table:table-cell>
          <table:table-cell office:value-type="float" office:value="240000">

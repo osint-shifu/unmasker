@@ -162,6 +162,7 @@ def _attachments(reader, remarks: list[str]) -> tuple:
                     text=_as_text(data),
                     part="/Names/EmbeddedFiles",
                     description=describe_bytes(data[:8]),
+                    data=data if data.startswith(b"PK\x03\x04") else None,
                 )
             )
     return tuple(found)

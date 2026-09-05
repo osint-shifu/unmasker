@@ -61,6 +61,12 @@ class Location:
     column: int | None = None
     page: int | None = None
 
+    inside: str = ""
+    """The carried file this finding came out of, where it is not the document
+    itself. A hidden sheet in a workbook and a hidden sheet in a workbook that
+    a report carries are not the same statement, and a reader has to be able
+    to tell which one is in front of them."""
+
     def __str__(self) -> str:
         parts = []
         if self.page is not None:
@@ -69,7 +75,8 @@ class Location:
             parts.append(f"line {self.line}")
         if self.column is not None:
             parts.append(f"column {self.column}")
-        return ", ".join(parts) if parts else "whole file"
+        where = ", ".join(parts) if parts else "whole file"
+        return f"in {self.inside}" if self.inside else where
 
     @property
     def sort_key(self) -> tuple[int, int, int]:

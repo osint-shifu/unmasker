@@ -166,7 +166,7 @@ Exit status is part of the interface:
 | PowerPoint / Impress | hidden slides and speaker notes |
 | JPEG | stale EXIF thumbnails that can preserve content removed by cropping, and the XMP edit history an editor left behind |
 | Metadata | undisclosed values, local filesystem paths and conflicting metadata copies |
-| Attachments | whole files carried inside a document, which no page mentions |
+| Attachments | whole files carried inside a document, which no page mentions — and what a carried workbook hides in turn |
 | OCR comparison | text present in the file but absent from the rendered page, and the reverse |
 
 Supported inputs are PDF, DOCX, ODT, XLSX, ODS, PPTX, ODP, JPEG and UTF-8 text.
@@ -289,12 +289,13 @@ unmasker tests/specimens/docx
 ```text
   unmasker  tests/specimens/docx                              4 of 8 files
   ────────────────────────────────────────────────────────────────────────
-    read      8 files, 16 findings
+    read      8 files, 17 findings
     not read  0 files
 
-  what was found                                                  10 kinds
+  what was found                                                  11 kinds
   ────────────────────────────────────────────────────────────────────────
     attached-file         1 file
+    hidden-sheet          1 file
     zero-width            1 file
     bidi-control          1 file
     tag-characters        1 file
@@ -307,7 +308,7 @@ unmasker tests/specimens/docx
 
   files that hide something                                        4 files
   ────────────────────────────────────────────────────────────────────────
-    libreoffice-writer-embedded-sheet.docx     attached-file
+    libreoffice-writer-embedded-sheet.docx     attached-file, hidden-sheet
     libreoffice-writer-hidden-characters.docx  zero-width, bidi-control,
                                                tag-characters,
                                                mixed-script
@@ -463,7 +464,7 @@ unmasker tests/specimens/pdf/libreoffice-writer-image-over-text.pdf --json
 {
   "tool": "unmasker",
   "schema": "unmasker.scan/1",
-  "version": "0.1.10",
+  "version": "0.1.11",
   "file": "tests/specimens/pdf/libreoffice-writer-image-over-text.pdf",
   "sha256": "d324105840b72c0d76c491150fe9220eabb4a87a3735afdb5de5af4c27fa0b66",
   "kind": "pdf",
@@ -548,7 +549,7 @@ drift away from the code: the detector list, the detector badge, the specimen
 count, the test count, and every example on this page - each command is run
 and its output compared to the block printed beneath it.
 
-743 tests.
+747 tests.
 
 ## Limits
 

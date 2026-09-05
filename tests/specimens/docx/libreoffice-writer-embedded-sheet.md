@@ -13,9 +13,21 @@ so the object has something to render as.
 
 ## What is stored inside
 
-`word/embeddings/oleObject1.xlsx` — a complete workbook, about 5.4 KB, which is
+`word/embeddings/oleObject1.xlsx` — a complete workbook, about 6.5 KB, which is
 a zip archive in its own right. The picture was made from it; the file travels
 with the document.
+
+The workbook has **two sheets**. `Summary` is the one the picture shows.
+`Workings` is marked `state="hidden"` and holds the reserve figure and the
+name:
+
+| | |
+| :--- | :--- |
+| Reserve | 240000 |
+| Told early | Kowalski |
+
+A person opening the document sees a picture of `Summary`. Nothing shows
+`Workings`, and it is in the file they were sent.
 
 ## Why this file exists
 
@@ -33,9 +45,10 @@ plainly there is the kind of small lie this tool cannot afford, so where the
 content cannot be quoted the report says what kind of thing it is, read from
 the first bytes rather than from the name.
 
-What the workbook holds is not read yet. A spreadsheet inside a document can
-carry hidden sheets and filtered rows exactly as a spreadsheet on disk can, and
-nothing here descends into it.
+The workbook **is** read: `hidden-sheet` fires on it, with `in oleObject1.xlsx`
+in the location column so the finding cannot be confused with a hidden sheet in
+the document itself. Saying the workbook is there and saying what is in it are
+two findings, and neither suppresses the other.
 
 Everything is invented: no such award, no such panel.
 

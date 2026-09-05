@@ -55,6 +55,15 @@ class Attachment:
     """Where in the container it was found, named the way the format names it:
     `/Names/EmbeddedFiles` in a PDF, an archive member elsewhere."""
 
+    data: bytes | None = None
+    """The attachment's bytes, kept only when it is a container worth reading
+    and small enough to hold.
+
+    A document can carry a video. Reading one into memory to discover it is a
+    video would cost more than the answer is worth, so the bytes are kept for
+    the office packages this tool can actually descend into and dropped
+    otherwise."""
+
     description: str = ""
     """What the bytes are, for an attachment that is not text.
 

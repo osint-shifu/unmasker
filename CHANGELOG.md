@@ -9,6 +9,37 @@ release: `unmasker.scan/1` for one file, `unmasker.survey/1` for a folder. A
 consumer should read that rather than the release number, because the release
 moves whenever anything does and the schema moves only when the shape changes.
 
+## [0.1.11] - 2026-09-05
+
+### Added
+
+- A carried office package is now read as a document in its own right. A
+  spreadsheet inside a report hides a sheet exactly as one on disk does, and
+  the file somebody was sent is the one carrying it. `hidden-sheet`,
+  `hidden-rows`, `filtered-rows` and everything else the spreadsheet reader
+  knows now fire inside an embedded workbook.
+- `Location` gained `inside`, so a finding says which carried object it came
+  out of. A hidden sheet in the document and a hidden sheet in a workbook the
+  document carries are not the same statement, and the report shows
+  `in oleObject1.xlsx` where the second is meant.
+
+### Notes
+
+- Saying an object is there and saying what is in it are two findings. Both are
+  reported; neither suppresses the other.
+- One level only. A package inside a package is not descended into, because a
+  document carrying itself would otherwise be read forever.
+- Bytes are held for carried zips under 32 MB and dropped otherwise. Reading an
+  embedded video into memory to discover it is a video costs more than the
+  answer is worth.
+
+### Known gaps
+
+- OpenDocument embedded objects are not descended into. `Object 1/` is a
+  directory of members rather than a file, and reassembling one into a package
+  would mean this repository writing the document it then reads. The ODT
+  specimen is reported as carrying an object and left at that.
+
 ## [0.1.10] - 2026-09-05
 
 ### Changed
@@ -268,6 +299,7 @@ First release.
   out of the entropy-coded data, reporting a picture the size of noise. It now
   stops at `SOS`/`EOI` the way `_segments()` already did.
 
+[0.1.11]: https://github.com/osint-shifu/unmasker/releases/tag/v0.1.11
 [0.1.10]: https://github.com/osint-shifu/unmasker/releases/tag/v0.1.10
 [0.1.9]: https://github.com/osint-shifu/unmasker/releases/tag/v0.1.9
 [0.1.8]: https://github.com/osint-shifu/unmasker/releases/tag/v0.1.8

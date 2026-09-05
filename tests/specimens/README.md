@@ -142,6 +142,13 @@ Named here so their absence is not mistaken for coverage:
   being confidently wrong rather than merely silent. It needs the fonts, or it
   needs a cited source per anchor, and until then the absence is the honest
   state.
+- **Reading inside an OpenDocument embedded object.** The OOXML half works:
+  `libreoffice-writer-embedded-sheet.docx` carries a workbook as one archive
+  member, and the hidden sheet in it is found. `Object 1/` is a *directory* of
+  members rather than a file, so there is nothing to hand a reader. Reassembling
+  one into a package would mean this repository writing the document it then
+  reads, which is the thing the corpus exists to stop, so the ODT specimen is
+  reported as carrying an object and not descended into.
 - **An annotation carrying an appearance stream.** Comments now have a
   specimen, but `/AP` is where a bar drawn as an annotation would live, and no
   producer here writes one — LibreOffice draws its shapes into the content

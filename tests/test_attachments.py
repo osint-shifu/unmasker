@@ -83,3 +83,35 @@ def test_an_opendocument_embedded_object_is_reported_as_one_thing():
 
 def test_a_document_with_no_embedded_object_is_not_reported():
     assert _findings(PLAIN_DOCX, "attached-file") == []
+
+
+# Descending into what is carried. A spreadsheet inside a document hides things
+# exactly as a spreadsheet on disk does, and nothing was looking.
+
+
+def test_a_hidden_sheet_inside_an_embedded_workbook_is_found():
+    """The workbook behind the pictured table has a sheet marked hidden.
+
+    Its values are in the document a person was sent. No page shows them, the
+    picture does not show them, and the file this tool was pointed at is the
+    one carrying them.
+    """
+    (found,) = _findings(DOCX, "hidden-sheet")
+    assert "Workings" in found.summary
+    assert "240000" in found.machine_reads
+
+
+def test_a_finding_from_inside_says_which_object_it_came_from():
+    """A hidden sheet in the document and one in a workbook it carries are not
+    the same statement, and a reader must be able to tell them apart."""
+    (found,) = _findings(DOCX, "hidden-sheet")
+    assert "oleObject1.xlsx" in str(found.location)
+
+
+def test_the_embedded_object_is_still_reported_in_its_own_right():
+    """Reading inside it does not replace saying it is there."""
+    assert len(_findings(DOCX, "attached-file")) == 1
+
+
+def test_nothing_is_invented_for_a_document_carrying_nothing():
+    assert _findings(PLAIN_DOCX, "hidden-sheet") == []

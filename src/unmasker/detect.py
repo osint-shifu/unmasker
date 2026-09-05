@@ -27,6 +27,51 @@ from .thumbnails import detect as detect_thumbnails
 
 
 def collect(extraction, ocr: bool = False) -> list[Finding]:
+    return _collect(extraction, ocr, descend=True)
+
+
+def _inside(attachments: tuple) -> list[Finding]:
+    """Everything a carried office package holds, read as a document itself.
+
+    A spreadsheet inside a report hides a sheet exactly as one on disk does,
+    and the file a person was sent is the one carrying it. Nothing was looking
+    until now, here or anywhere else this project has seen.
+
+    One level only. A package inside a package is not descended into, because
+    a document that carries itself would otherwise be read forever, and the
+    remark says so rather than letting the depth pass for coverage.
+    """
+    import tempfile
+
+    from .readers import UnreadableFile
+    from .readers import read as read_file
+
+    found: list[Finding] = []
+    for carried in attachments:
+        if not carried.data:
+            continue
+        with tempfile.NamedTemporaryFile(suffix=".zip") as handle:
+            handle.write(carried.data)
+            handle.flush()
+            try:
+                inner = read_file(handle.name)
+            except UnreadableFile:
+                # It is a zip and not a document this tool reads. That it is
+                # there has already been reported by `detect_attachments`.
+                continue
+            for finding in _collect(inner, ocr=False, descend=False):
+                found.append(
+                    dataclasses.replace(
+                        finding,
+                        location=dataclasses.replace(
+                            finding.location, inside=carried.name
+                        ),
+                    )
+                )
+    return found
+
+
+def _collect(extraction, ocr: bool = False, *, descend: bool = True) -> list[Finding]:
     """Run every text detector over every unit, tagging findings with the page.
 
     Detectors are additive and none outranks another: a unit with a bidi
@@ -97,6 +142,10 @@ def collect(extraction, ocr: bool = False) -> list[Finding]:
     # which is the same statement as every other detector here.
     if extraction.attachments:
         found.extend(detect_attachments(extraction.attachments))
+        # Saying a workbook is there and reading what is in it are two
+        # findings, not a ranking. Both are reported.
+        if descend:
+            found.extend(_inside(extraction.attachments))
 
     # Metadata is only a finding where it says something the document does not,
     # so the detector is given the document's own text to compare against.

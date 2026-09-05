@@ -38,6 +38,12 @@ def _digest(path: Path) -> str:
         return ""
 
 
+#: How large a carried file may be before its bytes are left where they are.
+#: Reading it is how this tool finds a hidden sheet inside a document; holding
+#: an embedded video to discover it is a video is not worth the memory.
+HOLD = 32 * 1024 * 1024
+
+
 def _embedded(path: Path) -> tuple:
     """Whole files an office package carries as members.
 
@@ -65,12 +71,17 @@ def _embedded(path: Path) -> tuple:
                 if len(parts) > 2 and parts[1] == "embeddings" and parts[-1]:
                     with archive.open(entry) as handle:
                         head = handle.read(8)
+                    # Only a zip is worth holding: it is the only carried thing
+                    # this tool can read, and the cap keeps an embedded video
+                    # out of memory.
+                    keep = head.startswith(b"PK\x03\x04") and entry.file_size <= HOLD
                     found.append(
                         Attachment(
                             name=parts[-1],
                             size=entry.file_size,
                             part=entry.filename,
                             description=describe_bytes(head),
+                            data=archive.read(entry) if keep else None,
                         )
                     )
                 elif parts[0].startswith("Object ") and len(parts) > 1 and parts[-1]:
