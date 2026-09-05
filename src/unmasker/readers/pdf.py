@@ -16,7 +16,7 @@ from ..metadata import read_pdf as read_pdf_metadata
 from ..metadata.detectors import describe
 from ..pdf.detectors import remarks as page_remarks
 from ..pdf.interpreter import InterpretedPage, interpret_page
-from .model import Extraction, TextUnit, UnreadableFile
+from .model import Attachment, Extraction, TextUnit, UnreadableFile
 
 
 def _has_fonts(page) -> bool:
@@ -110,8 +110,56 @@ def read_pdf(path: Path) -> Extraction:
         remarks=tuple(remarks),
         drawn=tuple(drawn),
         metadata=metadata,
+        attachments=_attachments(reader, remarks),
         source=path,
     )
+
+
+def _attachments(reader, remarks: list[str]) -> tuple:
+    """Whole files the document carries in `/Names/EmbeddedFiles`.
+
+    Asked of pypdf rather than walked by hand: the name tree is a tree, the
+    entries can be indirect, and the dependency is already here with its
+    reasons written down.
+
+    A failure is a remark, not an exception. A document whose page text was
+    read and whose attachment table was not is a document with something left
+    unsearched, and that is a thing to say rather than a reason to abandon the
+    report.
+    """
+    try:
+        carried = reader.attachments
+    except Exception as exc:
+        remarks.append(f"the embedded-file table could not be read: {exc}")
+        return ()
+
+    found = []
+    for name, versions in carried.items():
+        for data in versions if isinstance(versions, list) else [versions]:
+            found.append(
+                Attachment(
+                    name=str(name),
+                    size=len(data),
+                    text=_as_text(data),
+                    part="/Names/EmbeddedFiles",
+                )
+            )
+    return tuple(found)
+
+
+def _as_text(data: bytes) -> str | None:
+    """The attachment's content where it is text, and None where it is not.
+
+    Quoting a spreadsheet's bytes at a reader would be noise wearing the
+    clothes of evidence. Whether it decodes is the honest test.
+    """
+    try:
+        text = data.decode("utf-8")
+    except UnicodeDecodeError:
+        return None
+    # A text file has newlines in it, so `isprintable()` is the wrong question.
+    # Valid UTF-8 with no NUL in it is the one worth asking.
+    return None if "\x00" in text else text
 
 
 def _how_to_ocr() -> str:

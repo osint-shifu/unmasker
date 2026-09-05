@@ -40,6 +40,23 @@ class TextUnit:
 
 
 @dataclass(frozen=True)
+class Attachment:
+    """A file travelling inside another file.
+
+    `text` is the decoded content where the bytes are text and None where they
+    are not. A binary attachment is still a finding - it is there, and the page
+    does not say so - but quoting it would be noise rather than evidence.
+    """
+
+    name: str
+    size: int
+    text: str | None = None
+    part: str = ""
+    """Where in the container it was found, named the way the format names it:
+    `/Names/EmbeddedFiles` in a PDF, an archive member elsewhere."""
+
+
+@dataclass(frozen=True)
 class Extraction:
     kind: str
     """`pdf`, `docx`, `plain`. Names the reader, not the file extension."""
@@ -70,6 +87,14 @@ class Extraction:
     an empty record mean different things: the first is "this kind of file
     cannot carry tracked changes", the second is "it can and does not".
     """
+
+    attachments: tuple = ()
+    """Whole files carried inside this one, as `Attachment` records.
+
+    Empty means either that none were found or that this kind of file cannot
+    hold any. The two are not distinguished here because no container this
+    tool reads makes an attachment mandatory, so an empty tuple is never the
+    surprising answer."""
 
     sha256: str = ""
     """The digest of the bytes that were read.

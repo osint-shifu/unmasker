@@ -8,7 +8,7 @@
 
 [![PyPI](https://img.shields.io/pypi/v/unmasker?style=flat-square&color=3775A9)](https://pypi.org/project/unmasker/)
 ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-3776AB?style=flat-square)
-![25 detectors](https://img.shields.io/badge/detectors-25-8250df?style=flat-square)
+![26 detectors](https://img.shields.io/badge/detectors-26-8250df?style=flat-square)
 ![Runtime dependencies](https://img.shields.io/badge/runtime_dependencies-1-1f883d?style=flat-square)
 ![Local and read-only](https://img.shields.io/badge/local_%26_read--only-yes-1f883d?style=flat-square)
 ![Network requests](https://img.shields.io/badge/network_requests-none-1f883d?style=flat-square)
@@ -165,6 +165,7 @@ Exit status is part of the interface:
 | PowerPoint / Impress | hidden slides and speaker notes |
 | JPEG | stale EXIF thumbnails that can preserve content removed by cropping, and the XMP edit history an editor left behind |
 | Metadata | undisclosed values, local filesystem paths and conflicting metadata copies |
+| Attachments | whole files carried inside a document, which no page mentions |
 | OCR comparison | text present in the file but absent from the rendered page, and the reverse |
 
 Supported inputs are PDF, DOCX, ODT, XLSX, ODS, PPTX, ODP, JPEG and UTF-8 text.
@@ -392,6 +393,7 @@ The detector slug is stable output intended for reports and automation.
 | `undisclosed-metadata` | metadata values that do not appear in the document's visible text |
 | `metadata-path` | filesystem paths exposed by document metadata |
 | `metadata-conflict` | contradictory copies of metadata stored inside the same file |
+| `attached-file` | a whole file carried inside the document, on no page and not printed with it |
 
 ## Evidence model
 
@@ -457,7 +459,7 @@ unmasker tests/specimens/pdf/libreoffice-writer-image-over-text.pdf --json
 {
   "tool": "unmasker",
   "schema": "unmasker.scan/1",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "file": "tests/specimens/pdf/libreoffice-writer-image-over-text.pdf",
   "sha256": "d324105840b72c0d76c491150fe9220eabb4a87a3735afdb5de5af4c27fa0b66",
   "kind": "pdf",
@@ -527,7 +529,7 @@ human or a downstream system can decide what they mean.
 
 Every detector fires on a committed specimen written by a real producer,
 including LibreOffice, headless Chrome, Ghostscript, Tesseract, exiftool and
-ImageMagick. There are 34 of them and each has a provenance note describing how
+ImageMagick. There are 35 of them and each has a provenance note describing how
 it was produced, what a person sees and what is actually stored inside.
 
 This matters because real producers routinely disagree with assumptions made
@@ -542,7 +544,7 @@ drift away from the code: the detector list, the detector badge, the specimen
 count, the test count, and every example on this page - each command is run
 and its output compared to the block printed beneath it.
 
-730 tests.
+734 tests.
 
 ## Limits
 

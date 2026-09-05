@@ -9,6 +9,25 @@ release: `unmasker.scan/1` for one file, `unmasker.survey/1` for a folder. A
 consumer should read that rather than the release number, because the release
 moves whenever anything does and the schema moves only when the shape changes.
 
+## [0.1.7] - 2026-09-05
+
+### Added
+
+- `attached-file`, the twenty-sixth detector: a whole file carried inside a
+  PDF's `/Names/EmbeddedFiles`. It is on no page, no viewer shows it unless
+  asked, and printing the document does not print it - the same statement every
+  other detector here makes, that the page and the file disagree about what is
+  in this document. Text attachments are quoted; binary ones are named and
+  measured, because quoting a workbook's bytes would be noise dressed as
+  evidence.
+
+  It is deliberately not called a hiding technique. An attachment is a feature
+  used constantly and on purpose, so the finding says where the bytes are and
+  stops. A reader decides what that means.
+- A specimen: a LibreOffice decision notice naming no figure, with poppler's
+  `pdfattach` carrying a note that gives the reserve price. The control is an
+  existing PDF from the same producer with no attachment.
+
 ## [0.1.6] - 2026-09-05
 
 ### Added
@@ -164,6 +183,7 @@ First release.
   out of the entropy-coded data, reporting a picture the size of noise. It now
   stops at `SOS`/`EOI` the way `_segments()` already did.
 
+[0.1.7]: https://github.com/osint-shifu/unmasker/releases/tag/v0.1.7
 [0.1.6]: https://github.com/osint-shifu/unmasker/releases/tag/v0.1.6
 [0.1.5]: https://github.com/osint-shifu/unmasker/releases/tag/v0.1.5
 [0.1.4]: https://github.com/osint-shifu/unmasker/releases/tag/v0.1.4

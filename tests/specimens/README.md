@@ -50,6 +50,7 @@ which RFC 2606 reserves for the purpose.
 | [`jpeg/imagemagick-no-thumbnail.jpg`](jpeg/imagemagick-no-thumbnail.md) | ImageMagick | the photograph before the crop | nothing, and a note saying there was no preview to compare — control |
 | [`jpeg/exiftool-xmp-history.jpg`](jpeg/exiftool-xmp-history.md) | ImageMagick, exiftool 12.x | a flat panel with one word on it | an XMP edit history naming an application, two timestamps and the document it was derived from |
 | [`jpeg/exiftool-xmp-absent.jpg`](jpeg/exiftool-xmp-absent.md) | ImageMagick | the same panel | nothing, and no packet to read — control |
+| [`pdf/poppler-pdf-with-an-attachment.pdf`](pdf/poppler-pdf-with-an-attachment.md) | LibreOffice 24.2, poppler `pdfattach` | a decision notice naming no figure | a text file in `/Names/EmbeddedFiles` giving the reserve price |
 
 Every specimen that hides text *on the page* is also found by `--ocr`, which
 renders the page and reads the picture back and knows none of the mechanisms —

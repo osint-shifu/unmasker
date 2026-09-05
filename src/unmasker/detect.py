@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import dataclasses
 
+from .attachments import detect_attachments
 from .findings import Finding
 from .metadata.detectors import detect as detect_metadata
 from .pdf.detectors import detect as detect_drawn
@@ -83,6 +84,12 @@ def collect(extraction, ocr: bool = False) -> list[Finding]:
             )
             found.extend(unrendered_text(painted, words))
             found.extend(unextractable_text(painted, words))
+
+    # A whole file carried inside this one. Not a hiding technique - an
+    # attachment is a feature - but it is content the page does not mention,
+    # which is the same statement as every other detector here.
+    if extraction.attachments:
+        found.extend(detect_attachments(extraction.attachments))
 
     # Metadata is only a finding where it says something the document does not,
     # so the detector is given the document's own text to compare against.
