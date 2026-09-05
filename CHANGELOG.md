@@ -9,6 +9,30 @@ release: `unmasker.scan/1` for one file, `unmasker.survey/1` for a folder. A
 consumer should read that rather than the release number, because the release
 moves whenever anything does and the schema moves only when the shape changes.
 
+## [0.1.1] - 2026-09-05
+
+Documentation only. The code published as 0.1.0 is the code published here;
+the version moved because PyPI renders the description baked into the release
+and had no other way to be shown the current front page.
+
+### Changed
+
+- The README's examples are output the tool actually produced, and a test now
+  runs each command on the page and compares it to the block printed beneath
+  it. They had drifted: one claimed four findings and listed two, for a file
+  not in the repository; another showed two findings for a spreadsheet that
+  yields seven; the JSON example carried a literal `"..."` inside an array,
+  below the promise that values are never shortened with ellipses.
+- The front page spells the project `unmasker`, the way the package always
+  did. The description carried by 0.1.0 capitalised it in four places.
+
+### Added
+
+- A test tying `__version__` to the version in `pyproject.toml`. They are two
+  claims about one fact kept in two files, and only the second was checked at
+  release time, so `--version` could name a release the package metadata did
+  not.
+
 ## [0.1.0] - 2026-09-05
 
 First release.
@@ -42,4 +66,5 @@ First release.
   out of the entropy-coded data, reporting a picture the size of noise. It now
   stops at `SOS`/`EOI` the way `_segments()` already did.
 
+[0.1.1]: https://github.com/osint-shifu/unmasker/releases/tag/v0.1.1
 [0.1.0]: https://github.com/osint-shifu/unmasker/releases/tag/v0.1.0

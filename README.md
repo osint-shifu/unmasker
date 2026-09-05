@@ -455,7 +455,7 @@ unmasker tests/specimens/pdf/libreoffice-writer-image-over-text.pdf --json
 {
   "tool": "unmasker",
   "schema": "unmasker.scan/1",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "file": "tests/specimens/pdf/libreoffice-writer-image-over-text.pdf",
   "kind": "pdf",
   "searched": true,
@@ -539,7 +539,7 @@ drift away from the code: the detector list, the detector badge, the specimen
 count, the test count, and every example on this page - each command is run
 and its output compared to the block printed beneath it.
 
-722 tests.
+723 tests.
 
 ## Limits
 

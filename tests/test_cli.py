@@ -444,3 +444,23 @@ def test_ocr_says_what_is_missing_rather_than_failing_obscurely(capsys, monkeypa
     code, _, err = run(capsys, str(SPECIMENS / "libreoffice-writer-black-bars.pdf"), "--ocr")
     assert code == 2
     assert "gs" in err and "tesseract" in err
+
+
+def test_the_module_and_the_package_agree_on_the_version():
+    """`--version` and the wheel's metadata are two claims about one fact.
+
+    They are written in two files, and only one of them is checked at release
+    time: the workflow compares the tag to `pyproject.toml` and never looks at
+    `__version__`. Left alone, `unmasker --version` can name a release the
+    package metadata does not, which is the kind of disagreement this tool
+    exists to point at in other people's files.
+    """
+    import re
+    from pathlib import Path
+
+    pyproject = Path(__file__).resolve().parent.parent / "pyproject.toml"
+    declared = re.search(
+        r'^version = "([^"]+)"', pyproject.read_text(encoding="utf-8"), re.MULTILINE
+    )
+    assert declared, "pyproject.toml no longer states a version"
+    assert declared.group(1) == __version__

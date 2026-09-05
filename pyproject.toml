@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "unmasker"
-version = "0.1.0"
+version = "0.1.1"
 description = "What a human sees in a document, against what a machine reads out of it."
 readme = "README.md"
 requires-python = ">=3.10"
