@@ -9,6 +9,28 @@ release: `unmasker.scan/1` for one file, `unmasker.survey/1` for a folder. A
 consumer should read that rather than the release number, because the release
 moves whenever anything does and the schema moves only when the shape changes.
 
+## [0.1.2] - 2026-09-05
+
+Documentation only, again. The description is the same file on both surfaces
+and it did not read the same on both.
+
+### Fixed
+
+- Two callouts used GitHub's alert syntax, which only GitHub renders. On PyPI
+  they showed the literal text `[!IMPORTANT]` and `[!NOTE]` above an ordinary
+  quote. Both now open with the sentence they were emphasising, which carries
+  the weight on either renderer and says something a label restating its own
+  kind does not.
+
+### Added
+
+- A test refusing GitHub-only alert syntax anywhere in the README, so the next
+  one is caught before it reaches PyPI.
+- `UNMASKER_REFRESH_README=1 pytest tests/test_readme_examples.py` rewrites the
+  page's example blocks from the tool. Every release moves the version inside
+  the JSON example, so regenerating them was going to be manual work on each
+  one.
+
 ## [0.1.1] - 2026-09-05
 
 Documentation only. The code published as 0.1.0 is the code published here;
@@ -66,5 +88,6 @@ First release.
   out of the entropy-coded data, reporting a picture the size of noise. It now
   stops at `SOS`/`EOI` the way `_segments()` already did.
 
+[0.1.2]: https://github.com/osint-shifu/unmasker/releases/tag/v0.1.2
 [0.1.1]: https://github.com/osint-shifu/unmasker/releases/tag/v0.1.1
 [0.1.0]: https://github.com/osint-shifu/unmasker/releases/tag/v0.1.0

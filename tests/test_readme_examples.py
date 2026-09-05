@@ -29,6 +29,7 @@ from __future__ import annotations
 import contextlib
 import io
 import json
+import os
 import re
 from pathlib import Path
 
@@ -46,6 +47,14 @@ WIDTH = 74
 #: a test that checks nothing and still passes.
 EXPECTED_PAIRS = 5
 
+#: Set this to rewrite the blocks from the tool rather than assert them:
+#:
+#:     UNMASKER_REFRESH_README=1 pytest tests/test_readme_examples.py
+#:
+#: Read the diff before keeping it. This regenerates the page; it does not
+#: check it.
+REFRESH = "UNMASKER_REFRESH_README"
+
 _FENCE = re.compile(r"^```(\w*)\s*$")
 
 
@@ -61,18 +70,19 @@ class _Utf8(io.StringIO):
     encoding = "utf-8"
 
 
-def _blocks(text: str) -> list[tuple[str, str]]:
-    """Every fenced block, as (language, body)."""
-    out: list[tuple[str, str]] = []
+def _blocks(text: str) -> list[tuple[str, str, int, int]]:
+    """Every fenced block, as (language, body, opening line, closing line)."""
+    out: list[tuple[str, str, int, int]] = []
     language: str | None = None
     body: list[str] = []
+    start = 0
 
-    for line in text.splitlines():
+    for number, line in enumerate(text.splitlines()):
         fence = _FENCE.match(line)
         if fence and language is None:
-            language, body = fence.group(1), []
+            language, body, start = fence.group(1), [], number
         elif fence:
-            out.append((language or "", "\n".join(body)))
+            out.append((language or "", "\n".join(body), start, number))
             language = None
         elif language is not None:
             body.append(line)
@@ -86,7 +96,7 @@ def _pairs(text: str) -> list[tuple[str, str]]:
     found = []
 
     # Pairwise, so the two sequences differ by one on purpose.
-    for (language, body), (next_language, output) in zip(
+    for (language, body, _, _), (next_language, output, _, _) in zip(
         blocks, blocks[1:], strict=False
     ):
         command = body.strip()
@@ -126,6 +136,27 @@ def _as_written(text: str, argv: list[str]) -> str:
     return text
 
 
+def _rewrite(command: str, fresh: str) -> None:
+    """Put `fresh` into the block printed under `command`, in place.
+
+    Every release moves the version string inside the JSON example, so without
+    a way to regenerate, each one means copying output back into the page by
+    hand and hoping nothing was missed.
+    """
+    lines = README.read_text(encoding="utf-8").splitlines(keepends=True)
+    blocks = _blocks("".join(lines))
+
+    for (language, body, _, _), (_, _, start, end) in zip(
+        blocks, blocks[1:], strict=False
+    ):
+        if language == "bash" and body.strip() == command:
+            lines[start + 1 : end] = [line + "\n" for line in fresh.splitlines()]
+            README.write_text("".join(lines), encoding="utf-8")
+            return
+
+    raise AssertionError(f"no block found under {command!r}")
+
+
 def _run(command: str) -> str:
     """Run the command the README shows, and return what it printed."""
     stream = _Utf8()
@@ -154,7 +185,30 @@ def test_the_readme_shows_what_the_command_prints(
     command: str, shown: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.chdir(ROOT)
+    fresh = _run(command).strip("\n")
+
+    if os.environ.get(REFRESH):
+        _rewrite(command, fresh)
+        pytest.skip(f"rewrote the block under {command}")
+
     # Only blank lines at the very edges are normalised. A report opens
     # with one for breathing room under the shell prompt, which a fenced
     # block has no use for.
-    assert _run(command).strip("\n") == shown.strip("\n")
+    assert fresh == shown.strip("\n")
+
+
+def test_the_readme_avoids_markup_only_github_renders() -> None:
+    """GitHub alert syntax is invisible everywhere else, and PyPI is everywhere.
+
+    `> [!IMPORTANT]` becomes a coloured callout on GitHub and the literal text
+    `[!IMPORTANT]` inside a plain quote on PyPI, which is the page most people
+    reach first. The same README is shipped as the package description, so it
+    has to read on both. A bold opening sentence carries the emphasis and says
+    something, which a label restating its own kind does not.
+    """
+    offenders = [
+        (number, line)
+        for number, line in enumerate(README.read_text(encoding="utf-8").splitlines(), 1)
+        if re.search(r"\[!(?:NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]", line)
+    ]
+    assert not offenders, offenders

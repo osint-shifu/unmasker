@@ -149,10 +149,9 @@ Exit status is part of the interface:
 | `1` | read, searched, findings exist |
 | `2` | could not be read |
 
-> [!IMPORTANT]
-> A file that could not be read is not a file that came back clean. unmasker
-> keeps those states separate so a pipeline cannot silently treat failure as a
-> clean result.
+> **A file that could not be read is not a file that came back clean.**
+> unmasker keeps those states separate so a pipeline cannot silently treat
+> failure as a clean result.
 
 ## What it finds
 
@@ -405,8 +404,7 @@ Each finding carries one of three evidence bases:
 There are no severity scores or synthetic confidence percentages. Different
 questions are not ranked against each other.
 
-> [!NOTE]
-> "Nothing found" and "nothing could be searched" are different results.
+> **"Nothing found" and "nothing could be searched" are different results.**
 > unmasker keeps them separate. JSON exposes this explicitly through the
 > `searched` field.
 
@@ -455,7 +453,7 @@ unmasker tests/specimens/pdf/libreoffice-writer-image-over-text.pdf --json
 {
   "tool": "unmasker",
   "schema": "unmasker.scan/1",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "file": "tests/specimens/pdf/libreoffice-writer-image-over-text.pdf",
   "kind": "pdf",
   "searched": true,
@@ -539,7 +537,7 @@ drift away from the code: the detector list, the detector badge, the specimen
 count, the test count, and every example on this page - each command is run
 and its output compared to the block printed beneath it.
 
-723 tests.
+724 tests.
 
 ## Limits
 
