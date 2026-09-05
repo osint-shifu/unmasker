@@ -9,6 +9,20 @@ release: `unmasker.scan/1` for one file, `unmasker.survey/1` for a folder. A
 consumer should read that rather than the release number, because the release
 moves whenever anything does and the schema moves only when the shape changes.
 
+## [0.1.12] - 2026-09-05
+
+### Fixed
+
+- `--json` dropped `location.inside`. The terminal report said
+  `in oleObject1.xlsx` and the JSON said nothing, so a pipeline could not tell
+  a hidden sheet in the document from one in a workbook the document carries -
+  the exact distinction the field was added for, missing from the consumer that
+  most needed it. Found by running the published build rather than the tests,
+  which all passed.
+
+  `SCHEMA` stays at 1: the key is omitted when empty, like every other
+  coordinate, and adding one a consumer may ignore does not change the shape.
+
 ## [0.1.11] - 2026-09-05
 
 ### Added
@@ -299,6 +313,7 @@ First release.
   out of the entropy-coded data, reporting a picture the size of noise. It now
   stops at `SOS`/`EOI` the way `_segments()` already did.
 
+[0.1.12]: https://github.com/osint-shifu/unmasker/releases/tag/v0.1.12
 [0.1.11]: https://github.com/osint-shifu/unmasker/releases/tag/v0.1.11
 [0.1.10]: https://github.com/osint-shifu/unmasker/releases/tag/v0.1.10
 [0.1.9]: https://github.com/osint-shifu/unmasker/releases/tag/v0.1.9

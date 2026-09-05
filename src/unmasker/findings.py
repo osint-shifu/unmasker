@@ -133,6 +133,10 @@ class Finding:
                     ("page", self.location.page),
                     ("line", self.location.line),
                     ("column", self.location.column),
+                    # Omitted when empty, like the rest: adding a key a
+                    # consumer may ignore does not change the shape, so
+                    # SCHEMA stays where it is.
+                    ("inside", self.location.inside or None),
                 )
                 if v is not None
             },

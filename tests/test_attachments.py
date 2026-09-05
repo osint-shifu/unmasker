@@ -115,3 +115,15 @@ def test_the_embedded_object_is_still_reported_in_its_own_right():
 
 def test_nothing_is_invented_for_a_document_carrying_nothing():
     assert _findings(PLAIN_DOCX, "hidden-sheet") == []
+
+
+def test_json_says_which_object_a_finding_came_from_too():
+    """The terminal report says `in oleObject1.xlsx`; --json said nothing.
+
+    A pipeline reading the JSON could not tell a hidden sheet in the document
+    from one in a workbook the document carries, which is the distinction the
+    field was added for. The consumer that most needs it was the one not given
+    it.
+    """
+    (found,) = _findings(DOCX, "hidden-sheet")
+    assert found.as_dict()["location"]["inside"] == "oleObject1.xlsx"

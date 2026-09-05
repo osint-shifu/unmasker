@@ -455,6 +455,7 @@ The JSON shape is versioned separately from the package version:
 | `version` | the unmasker build that produced the report |
 | `searched` | `false` means there was nothing to search, not that a search came back empty |
 | `sha256` | the digest of the bytes that were read, so a finding can be checked against the file rather than the path |
+| `location.inside` | present when a finding came out of a file the document carries, naming it |
 
 ```bash
 unmasker tests/specimens/pdf/libreoffice-writer-image-over-text.pdf --json
@@ -464,7 +465,7 @@ unmasker tests/specimens/pdf/libreoffice-writer-image-over-text.pdf --json
 {
   "tool": "unmasker",
   "schema": "unmasker.scan/1",
-  "version": "0.1.11",
+  "version": "0.1.12",
   "file": "tests/specimens/pdf/libreoffice-writer-image-over-text.pdf",
   "sha256": "d324105840b72c0d76c491150fe9220eabb4a87a3735afdb5de5af4c27fa0b66",
   "kind": "pdf",
@@ -549,7 +550,7 @@ drift away from the code: the detector list, the detector badge, the specimen
 count, the test count, and every example on this page - each command is run
 and its output compared to the block printed beneath it.
 
-747 tests.
+748 tests.
 
 ## Limits
 
