@@ -13,6 +13,7 @@ screen is free to be short.
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 from unmasker.report import Style
 from unmasker.scan import survey
@@ -155,7 +156,9 @@ def test_json_says_which_files_were_refused_and_why(case_folder):
 
     record = as_json(survey(case_folder))
     refused = [f for f in record["files"] if f.get("refused")]
-    assert {f["file"].split("/")[-1] for f in refused} == {"deck.pptx", "photo.jpg"}
+    # `Path(...).name`, not a split on "/": Windows spells the separator the
+    # other way and the first CI run on this said so.
+    assert {Path(f["file"]).name for f in refused} == {"deck.pptx", "photo.jpg"}
     assert all(isinstance(f["refused"], str) and f["refused"] for f in refused)
 
 
