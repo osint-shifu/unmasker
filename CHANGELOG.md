@@ -9,9 +9,9 @@ release: `unmasker.scan/1` for one file, `unmasker.survey/1` for a folder. A
 consumer should read that rather than the release number, because the release
 moves whenever anything does and the schema moves only when the shape changes.
 
-## [Unreleased]
+## [0.1.0] - 2026-09-05
 
-Nothing released yet. What is in the tree:
+First release.
 
 ### Added
 
@@ -42,4 +42,4 @@ Nothing released yet. What is in the tree:
   out of the entropy-coded data, reporting a picture the size of noise. It now
   stops at `SOS`/`EOI` the way `_segments()` already did.
 
-[Unreleased]: https://github.com/osint-shifu/unmasker/commits/master
+[0.1.0]: https://github.com/osint-shifu/unmasker/releases/tag/v0.1.0

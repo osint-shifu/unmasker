@@ -6,6 +6,7 @@
 
 **Local, read-only detection of hidden and failed-redaction content in documents.**
 
+[![PyPI](https://img.shields.io/pypi/v/unmasker?style=flat-square&color=3775A9)](https://pypi.org/project/unmasker/)
 ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-3776AB?style=flat-square)
 ![25 detectors](https://img.shields.io/badge/detectors-25-8250df?style=flat-square)
 ![Runtime dependencies](https://img.shields.io/badge/runtime_dependencies-1-1f883d?style=flat-square)
@@ -160,8 +161,15 @@ control — which is not something either could arrange for the other.
 
 ## Installation
 
-Not published anywhere yet, so it is installed from a checkout of this
-repository:
+```bash
+pipx install unmasker
+```
+
+or `uv tool install unmasker`. Either puts `unmasker` on the PATH in an
+environment of its own, which is what you want for a command-line tool: it
+never shares a site-packages with anything you are investigating.
+
+From a checkout, to work on it:
 
 ```bash
 python3 -m venv .venv
