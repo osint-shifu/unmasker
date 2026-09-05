@@ -30,7 +30,7 @@ from __future__ import annotations
 
 import textwrap
 
-from . import __version__
+from . import SCHEMA, __version__
 from .report import MARGIN, Style, _header, _rule
 from .scan import Survey
 from .theme import FAINT, FOREGROUND, MUTED
@@ -196,6 +196,7 @@ def as_json(survey: Survey) -> dict:
     screen be a summary rather than a scroll."""
     return {
         "tool": "unmasker",
+        "schema": f"unmasker.survey/{SCHEMA}",
         "version": __version__,
         "root": str(survey.root),
         "files": [

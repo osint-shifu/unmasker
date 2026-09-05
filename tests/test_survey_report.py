@@ -137,6 +137,16 @@ def test_a_folder_where_nothing_was_read_never_says_nothing_was_found(tmp_path):
 # --------------------------------------------------------------------------
 
 
+def test_json_names_the_survey_shape_apart_from_the_scan_shape(case_folder):
+    """A folder's output and a file's output are not the same document, and
+    before this they announced themselves identically."""
+    from unmasker.survey_report import as_json
+
+    record = as_json(survey(case_folder))
+
+    assert record["schema"] == "unmasker.survey/1"
+
+
 def test_json_carries_every_finding_the_screen_summarised(case_folder):
     from unmasker.survey_report import as_json
 

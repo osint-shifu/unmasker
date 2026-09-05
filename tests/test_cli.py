@@ -22,6 +22,7 @@ from pathlib import Path
 
 import pytest
 
+from unmasker import __version__
 from unmasker.cli import main
 
 SPECIMENS = Path(__file__).parent / "specimens" / "pdf"
@@ -151,6 +152,24 @@ def test_json_carries_the_findings_and_the_exit_code_still_gates(capsys, tmp_pat
     assert doc["findings"][0]["basis"] == "direct"
     assert doc["findings"][0]["location"]["line"] == 1
     assert doc["findings"][0]["codepoints"] == ["U+200B"]
+
+
+def test_json_names_its_shape_and_not_only_its_build(capsys, tmp_path):
+    """`version` says which build wrote the document. It does not say what
+    shape the document is, and the two answer different questions: a consumer
+    pinning `0.1.0` breaks on every release, and one reading the shape keeps
+    working until the shape actually changes.
+
+    The single-file and folder outputs have *different* shapes and nothing
+    else distinguishes them, so the name carries which one this is.
+    """
+    f = tmp_path / "note.txt"
+    f.write_text("pay\u200bload", encoding="utf-8")
+    _, out, _ = run(capsys, str(f), "--json")
+    doc = json.loads(out)
+
+    assert doc["schema"] == "unmasker.scan/1"
+    assert doc["version"] == __version__
 
 
 def test_json_says_whether_there_was_anything_to_search(capsys):

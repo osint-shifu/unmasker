@@ -24,7 +24,7 @@ import shutil
 import sys
 from pathlib import Path
 
-from . import __version__, about
+from . import SCHEMA, __version__, about
 from .detect import collect
 from .html import render_file as render_html
 from .html import render_survey as render_survey_html
@@ -190,6 +190,7 @@ def main(argv: list[str] | None = None) -> int:
         json.dump(
             {
                 "tool": "unmasker",
+                "schema": f"unmasker.scan/{SCHEMA}",
                 "version": __version__,
                 "file": str(args.file),
                 "kind": extraction.kind,
