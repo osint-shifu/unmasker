@@ -124,10 +124,14 @@ def test_the_formats_it_names_are_the_ones_the_reader_dispatches_on():
     assert "content.xml" in dispatch and "ODS" in about.FORMATS
 
 
-def test_it_says_presentations_are_refused():
-    """The first surprise a reader can have is pointing this at a deck."""
-    assert "refused" in about.FORMATS.lower()
-    assert "NO_SLIDES" in (SOURCE / "readers" / "__init__.py").read_text()
+def test_it_claims_no_format_the_reader_cannot_dispatch():
+    """This test used to assert decks were refused. They are read now, and the
+    claim underneath it survives: every format named on the screen has to be
+    one the reader actually reaches."""
+    dispatch = (SOURCE / "readers" / "__init__.py").read_text()
+    assert "ppt/presentation.xml" in dispatch and "PPTX" in about.FORMATS
+    assert "presentation" in dispatch and "ODP" in about.FORMATS
+    assert "refused" not in about.FORMATS.lower()
 
 
 # --------------------------------------------------------------------------

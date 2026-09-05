@@ -82,6 +82,14 @@ class Extraction:
     Typed loosely so the model does not have to know about PDF or OOXML.
     """
 
+    slides: object | None = None
+    """A `SlideRecord` for readers that can see a deck, else None.
+
+    The same split as `sheets`, and for the same reason: a slide an application
+    skips must not reach `units`, where it would be searched as though an
+    audience had seen it - and then reported clean.
+    """
+
     sheets: object | None = None
     """A `SheetRecord` for readers that can see a workbook, else None.
 

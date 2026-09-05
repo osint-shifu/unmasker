@@ -13,29 +13,10 @@ from .model import Extraction, TextUnit, UnreadableFile
 from .odf import read_odf
 from .pdf import read_pdf
 from .plain import read_plain
+from .presentation import read_odp, read_pptx
 from .spreadsheet import odf_flavour, read_ods, read_xlsx
 
 __all__ = ["Extraction", "TextUnit", "UnreadableFile", "read"]
-
-NO_SLIDES = (
-    "is a presentation, and unmasker does not read slides yet. It refuses "
-    "rather than read the deck as a text document, which would report a "
-    "hidden slide and a speaker note as visible text and then call the file "
-    "clean"
-)
-"""Why a deck is refused instead of half-read.
-
-Reading it as prose is not a near miss. It is the failure the spreadsheet
-reader was written to remove - a concealed layer handed to the detectors as
-though a person could see it, followed by an all-clear - and it would arrive
-here one container over. Refusing says less and says nothing untrue.
-
-The reader that would replace this is blocked on a specimen, not on the code:
-`libreoffice-impress` is not installed on this machine, and `CONTRIBUTING.md` is
-explicit that a detector proved only against a hand-built fixture is the shape
-of the bug that started this project.
-"""
-
 
 def read(path: str | Path) -> Extraction:
     """Read `path` into text units, or raise `UnreadableFile`."""
@@ -70,7 +51,7 @@ def _read_zip(path: Path) -> Extraction:
     if "xl/workbook.xml" in names:
         return read_xlsx(path)
     if "ppt/presentation.xml" in names:
-        raise UnreadableFile(f"{path.name} {NO_SLIDES}")
+        return read_pptx(path)
     if "content.xml" in names:
         # Every OpenDocument file is a `content.xml`, and until the flavour is
         # asked for they all look like text documents. Sending a spreadsheet to
@@ -81,7 +62,7 @@ def _read_zip(path: Path) -> Extraction:
         if flavour == "spreadsheet":
             return read_ods(path)
         if flavour == "presentation":
-            raise UnreadableFile(f"{path.name} {NO_SLIDES}")
+            return read_odp(path)
         return read_odf(path)
     raise UnreadableFile(
         f"{path.name} is a zip but not a document unmasker reads: it holds "

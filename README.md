@@ -75,8 +75,8 @@ Python 3.10 or later, and one runtime dependency — `pypdf`, which is pure
 Python, BSD-licensed and has no dependencies of its own. It was checked rather than
 assumed, and any second one has to earn its place the same way — in writing.
 
-Reads PDF, DOCX, ODT, XLSX, ODS and any text file. Local, read-only, no
-network, and it never writes to the file it is given.
+Reads PDF, DOCX, ODT, XLSX, ODS, PPTX, ODP and any text file. Local,
+read-only, no network, and it never writes to the file it is given.
 
 Point it at a **folder** and it surveys the lot: how much was read, how much
 could not be, which kinds of finding turned up and in how many files, and which
@@ -109,11 +109,6 @@ is escaped, and a `|` never reaches a table cell unescaped.
 It never ranks the files. Sorting the worst documents to the top would be the
 judgement this tool leaves to its reader, so the tally counts files per kind
 and the list is in path order.
-
-Presentations — `.pptx` and `.odp` — are **refused**, with a message saying so.
-Reading a deck as a text document would report a hidden slide and a speaker
-note as visible text and then call the file clean, and saying less is better
-than saying something untrue.
 
 | | |
 | --- | --- |
@@ -174,6 +169,13 @@ exact. Everything else is quoted as the file stores it, with a note naming the
 format the sheet applies — a number formatter that is nearly right quotes a
 figure that is nearly right, which is worse than an exact quotation and a
 sentence of context.
+
+### In a presentation
+
+| | |
+| --- | --- |
+| `hidden-slide` | a slide the deck skips when it is shown, quoted in full — the one that was cut before the meeting and never deleted |
+| `speaker-notes` | a note that was never on the screen, which is what notes are for and why the candid line ends up in one |
 
 ### In the container
 

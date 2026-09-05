@@ -196,7 +196,7 @@ def test_the_survey_carries_the_full_detail(case_folder):
 
 def test_the_survey_lists_what_could_not_be_read(case_folder):
     out = render_survey(survey(case_folder))
-    assert "deck.pptx" in out and "photo.jpg" in out
+    assert "attachments.zip" in out and "photo.jpg" in out
 
 
 def test_the_survey_does_not_rank(case_folder):

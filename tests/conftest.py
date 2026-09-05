@@ -65,6 +65,7 @@ class StubStream(Stub):
 #: be read for two different reasons.
 CASE_FOLDER = {
     "bids.xlsx": "xlsx/libreoffice-calc-hidden-columns.xlsx",
+    "deck.pptx": "pptx/libreoffice-impress-hidden-slide.pptx",
     "minutes.pdf": "pdf/libreoffice-writer-black-bars.pdf",
     "position-note.odt": "odf/libreoffice-writer-position-note.odt",
     "clean.pdf": "pdf/libreoffice-writer-properly-redacted.pdf",
@@ -82,14 +83,17 @@ def case_folder(tmp_path):
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy(SPECIMENS / source, target)
 
-    # Two refusals, for two different reasons: one the tool recognises and
-    # explains, one it simply does not read. A real zip, because a broken one
-    # would be refused for being broken and would test nothing.
+    # Two refusals, for two different reasons: a zip that is a zip and nothing
+    # this tool reads, and a file that is not a document at all. The zip is
+    # real, because a broken one would be refused for being broken and would
+    # test nothing.
+    #
+    # `deck.pptx` used to be the first of these. It is a real deck now - decks
+    # were refused outright until `libreoffice-impress` existed to write one.
     import zipfile
 
-    with zipfile.ZipFile(tmp_path / "deck.pptx", "w") as deck:
-        deck.writestr("[Content_Types].xml", "<Types/>")
-        deck.writestr("ppt/presentation.xml", "<presentation/>")
+    with zipfile.ZipFile(tmp_path / "attachments.zip", "w") as bundle:
+        bundle.writestr("readme.txt", "nothing in here is a document")
     (tmp_path / "photo.jpg").write_bytes(b"\xff\xd8\xff\xe0\x00\x10JFIF\x00" * 4)
 
     # Never walked into: a case folder under version control would otherwise

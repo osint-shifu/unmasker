@@ -107,9 +107,9 @@ EXIT = (
     ("2", "could not be read"),
 )
 
-#: One line, because the first surprise a reader can have is pointing this at a
-#: deck and being refused.
-FORMATS = "PDF · DOCX · ODT · XLSX · ODS · text.  Presentations are refused."
+#: One line. It used to end "Presentations are refused", which was the first
+#: surprise a reader could have; decks are read now.
+FORMATS = "PDF · DOCX · ODT · XLSX · ODS · PPTX · ODP · text."
 
 
 def _encodable(text: str, stream: TextIO | None) -> bool:

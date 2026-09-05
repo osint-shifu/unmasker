@@ -51,9 +51,8 @@ def test_it_names_the_kinds_a_file_hides_beside_it(case_folder):
 
 def test_it_names_every_file_it_could_not_read_and_why(case_folder):
     text = screen(case_folder)
-    assert "deck.pptx" in text
+    assert "attachments.zip" in text
     assert "photo.jpg" in text
-    assert "presentation" in text
 
 
 def test_the_control_is_not_listed_as_hiding_anything(case_folder):
@@ -158,7 +157,7 @@ def test_json_says_which_files_were_refused_and_why(case_folder):
     refused = [f for f in record["files"] if f.get("refused")]
     # `Path(...).name`, not a split on "/": Windows spells the separator the
     # other way and the first CI run on this said so.
-    assert {Path(f["file"]).name for f in refused} == {"deck.pptx", "photo.jpg"}
+    assert {Path(f["file"]).name for f in refused} == {"attachments.zip", "photo.jpg"}
     assert all(isinstance(f["refused"], str) and f["refused"] for f in refused)
 
 
@@ -221,4 +220,4 @@ def test_json_on_a_directory_is_the_archive(case_folder, capsys):
 
     assert main([str(case_folder), "--json"]) == 1
     record = json.loads(capsys.readouterr().out)
-    assert "files" in record and len(record["files"]) == 7
+    assert "files" in record and len(record["files"]) == 8

@@ -19,6 +19,7 @@ from .pdf.detectors import unextractable_text, unrendered_text
 from .pdf.rendered import read_page_back
 from .revisions import detect as detect_revisions
 from .sheets import detect as detect_sheets
+from .slides import detect as detect_slides
 from .text.invisible import scan_text
 
 
@@ -54,6 +55,11 @@ def collect(extraction, ocr: bool = False) -> list[Finding]:
     # file.
     if extraction.sheets is not None:
         found.extend(detect_sheets(extraction.sheets))
+
+    # The same statement in a deck: a slide an application skips, and a note
+    # that was never on the screen at all.
+    if extraction.slides is not None:
+        found.extend(detect_slides(extraction.slides))
 
     # Reading each page back costs a render and an OCR pass - seconds a page -
     # and needs two external binaries, which is why it was kept out

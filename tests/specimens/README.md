@@ -43,6 +43,8 @@ which RFC 2606 reserves for the purpose.
 | [`ods/libreoffice-calc-formatted-values.ods`](ods/libreoffice-calc-formatted-values.md) | LibreOffice 24.2 Calc | the same timetable | the same row, with the displayed text kept in the cell |
 | [`pdf/libreoffice-calc-rotated-headers.pdf`](pdf/libreoffice-calc-rotated-headers.md) | LibreOffice 24.2 Calc | two rotated headers and a column that looks empty | a third header, sideways, white on the paper |
 | [`pdf/libreoffice-calc-clipped-overflow.pdf`](pdf/libreoffice-calc-clipped-overflow.md) | LibreOffice 24.2 Calc | two case notes that stop mid-word | the rest of each, clipped by a column boundary — and **nothing hidden** |
+| [`pptx/libreoffice-impress-hidden-slide.pptx`](pptx/libreoffice-impress-hidden-slide.md) | LibreOffice 24.2 Impress | a two-slide board review | a third slide that was cut, and a note the speaker was told not to say |
+| [`odp/libreoffice-impress-hidden-slide.odp`](odp/libreoffice-impress-hidden-slide.md) | LibreOffice 24.2 Impress | the same deck | the same two, behind a style instead of an attribute |
 
 Every specimen that hides text *on the page* is also found by `--ocr`, which
 renders the page and reads the picture back and knows none of the mechanisms —
@@ -141,12 +143,14 @@ Named here so their absence is not mistaken for coverage:
   the spreadsheet's `w:rPrChange`.
 - **Excel and Word themselves.** Neither is on this machine, so every OOXML
   file here was written by LibreOffice.
-- **Presentations.** `.pptx` and `.odp` are the same containers again, with
-  hidden slides and speaker notes in place of hidden rows. Both now refuse
-  rather than being half-read, and neither has a specimen: **`libreoffice-
-  impress` is not installed on this machine**, so no producer here can write a
-  deck at all. This is the one gap on the list that cannot be closed by
-  writing more code.
+- **PowerPoint itself**, and a presentation comment (`ppt/comments/`), which
+  LibreOffice does not write. Decks were the one gap here that no amount of
+  code could close - nothing on this machine could write one until
+  `libreoffice-impress` was installed.
+- **A slide with `show="1"`**, which PowerPoint writes and LibreOffice omits,
+  and **a deck whose slide parts are numbered out of order**. Both are held by
+  synthetic tests, because the specimen cannot tell the two implementations
+  apart — and mutation testing is what said so.
 - **Word's own OOXML.** Word is not on this machine, so every DOCX here was
   written by LibreOffice. It emits valid revision markup, but two producers
   never agree about everything — the PDF specimens proved that twice.

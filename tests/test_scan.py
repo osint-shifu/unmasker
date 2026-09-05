@@ -67,7 +67,7 @@ def test_a_single_file_still_works(case_folder):
 
 def test_it_separates_what_was_read_from_what_was_not(case_folder):
     found = survey(case_folder)
-    assert {r.path.name for r in found.refused} == {"deck.pptx", "photo.jpg"}
+    assert {r.path.name for r in found.refused} == {"attachments.zip", "photo.jpg"}
     assert "bids.xlsx" in {r.path.name for r in found.read}
 
 
@@ -75,9 +75,9 @@ def test_a_refusal_keeps_the_reason_it_was_refused(case_folder):
     """Two files here cannot be read for two different reasons, and a reader
     deciding whether to go and look at one needs to know which."""
     reasons = {r.path.name: r.refusal for r in survey(case_folder).refused}
-    assert "presentation" in reasons["deck.pptx"]
+    assert "zip" in reasons["attachments.zip"]
     assert reasons["photo.jpg"]
-    assert reasons["deck.pptx"] != reasons["photo.jpg"]
+    assert reasons["attachments.zip"] != reasons["photo.jpg"]
 
 
 def test_the_control_is_read_and_reported_as_hiding_nothing(case_folder):
@@ -90,7 +90,13 @@ def test_the_control_is_read_and_reported_as_hiding_nothing(case_folder):
 
 def test_files_that_hide_something_are_listed(case_folder):
     hiding = {r.path.name for r in survey(case_folder).hiding}
-    assert {"bids.xlsx", "minutes.pdf", "position-note.odt", "settlement.docx"} <= hiding
+    assert {
+        "bids.xlsx",
+        "deck.pptx",
+        "minutes.pdf",
+        "position-note.odt",
+        "settlement.docx",
+    } <= hiding
 
 
 # --------------------------------------------------------------------------

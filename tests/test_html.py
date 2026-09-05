@@ -154,9 +154,8 @@ def test_the_survey_carries_the_full_detail_not_a_summary(case_folder):
 
 def test_the_survey_lists_what_could_not_be_read(case_folder):
     out = render_survey(survey(case_folder))
-    assert "deck.pptx" in out
+    assert "attachments.zip" in out
     assert "photo.jpg" in out
-    assert "presentation" in out
 
 
 def test_the_survey_links_the_overview_to_the_detail(case_folder):
