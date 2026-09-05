@@ -42,6 +42,7 @@ def _inside(attachments: tuple) -> list[Finding]:
     remark says so rather than letting the depth pass for coverage.
     """
     import tempfile
+    from pathlib import Path
 
     from .readers import UnreadableFile
     from .readers import read as read_file
@@ -50,14 +51,18 @@ def _inside(attachments: tuple) -> list[Finding]:
     for carried in attachments:
         if not carried.data:
             continue
-        with tempfile.NamedTemporaryFile(suffix=".zip") as handle:
-            handle.write(carried.data)
-            handle.flush()
+        # A directory rather than `NamedTemporaryFile`: Windows will not let a
+        # second handle open a named temporary that is still open, so the read
+        # below failed there and the `except` swallowed it. Three CI jobs found
+        # nothing and said nothing, which is the failure this tool is against.
+        with tempfile.TemporaryDirectory(prefix="unmasker-carried-") as folder:
+            written = Path(folder) / "carried"
+            written.write_bytes(carried.data)
             try:
-                inner = read_file(handle.name)
+                inner = read_file(written)
             except UnreadableFile:
-                # It is a zip and not a document this tool reads. That it is
-                # there has already been reported by `detect_attachments`.
+                # A zip this tool does not read as a document. That it is there
+                # has already been said by `detect_attachments`.
                 continue
             for finding in _collect(inner, ocr=False, descend=False):
                 found.append(
