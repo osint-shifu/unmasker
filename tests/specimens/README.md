@@ -53,6 +53,7 @@ which RFC 2606 reserves for the purpose.
 | [`pdf/poppler-pdf-with-an-attachment.pdf`](pdf/poppler-pdf-with-an-attachment.md) | LibreOffice 24.2, poppler `pdfattach` | a decision notice naming no figure | a text file in `/Names/EmbeddedFiles` giving the reserve price |
 | [`docx/libreoffice-writer-embedded-sheet.docx`](docx/libreoffice-writer-embedded-sheet.md) | LibreOffice 24.2 Writer | a summary with a small table pictured in it | the whole workbook behind the picture, as `word/embeddings/oleObject1.xlsx` |
 | [`odt/libreoffice-writer-embedded-sheet.odt`](odt/libreoffice-writer-embedded-sheet.md) | LibreOffice 24.2 Writer | the same summary | the same workbook, as the sub-package `Object 1/` |
+| [`pdf/pypdf-incremental-page-removed.pdf`](pdf/pypdf-incremental-page-removed.md) | LibreOffice 24.2, pypdf 6.16 | a one-page award notice | an earlier revision holding the annex that was deleted, reserve price and all |
 
 Every specimen that hides text *on the page* is also found by `--ocr`, which
 renders the page and reads the picture back and knows none of the mechanisms —

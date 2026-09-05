@@ -117,6 +117,13 @@ class Extraction:
     cannot carry tracked changes", the second is "it can and does not".
     """
 
+    earlier: tuple = ()
+    """Earlier revisions this file still holds, as `Revision` records.
+
+    A PDF is appended to rather than rewritten, so a document that has been
+    edited carries every state it has been in. Empty for a file written once,
+    which is most of them."""
+
     attachments: tuple = ()
     """Whole files carried inside this one, as `Attachment` records.
 

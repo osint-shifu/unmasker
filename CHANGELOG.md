@@ -9,6 +9,37 @@ release: `unmasker.scan/1` for one file, `unmasker.survey/1` for a folder. A
 consumer should read that rather than the release number, because the release
 moves whenever anything does and the schema moves only when the shape changes.
 
+## [0.1.9] - 2026-09-05
+
+### Added
+
+- `earlier-revision`, the twenty-seventh detector, and the cleanest failed
+  redaction there is. A PDF is appended to rather than rewritten: an edit
+  leaves the original bytes where they are and writes a new cross-reference
+  section after them. Delete a page that way and the page does not go
+  anywhere - the new catalogue stops pointing at it, every viewer stops drawing
+  it, and the text is untouched. It was invisible to this tool, which read what
+  the current catalogue pointed at, like most tools do.
+
+  Reported per revision rather than merged, because two edits are two decisions
+  about what to stop showing and merging them would rank one against the other.
+  What is quoted is the text, not the count: a number of revisions is trivia.
+
+- A specimen: a one-page award notice whose earlier revision still holds the
+  annex that was deleted, reserve price and name included.
+
+### Notes on how it is read
+
+- Revision boundaries are found in the raw bytes and then **proved by
+  parsing**: `%%EOF` occurs inside streams, so an offset is a candidate until
+  the bytes before it parse as a complete document on their own. Slower than
+  trusting the marker, and close to impossible to fool.
+- Eight boundaries are examined. A file with more says so in a remark rather
+  than having the rest pass for searched.
+- The specimen's update is written by pypdf, which is also this project's
+  parser. It is checked against `qpdf`, an independent implementation, and the
+  detector never asks pypdf where a revision begins.
+
 ## [0.1.8] - 2026-09-05
 
 ### Added
@@ -213,6 +244,7 @@ First release.
   out of the entropy-coded data, reporting a picture the size of noise. It now
   stops at `SOS`/`EOI` the way `_segments()` already did.
 
+[0.1.9]: https://github.com/osint-shifu/unmasker/releases/tag/v0.1.9
 [0.1.8]: https://github.com/osint-shifu/unmasker/releases/tag/v0.1.8
 [0.1.7]: https://github.com/osint-shifu/unmasker/releases/tag/v0.1.7
 [0.1.6]: https://github.com/osint-shifu/unmasker/releases/tag/v0.1.6

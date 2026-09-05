@@ -17,6 +17,7 @@ from .findings import Finding
 from .metadata.detectors import detect as detect_metadata
 from .pdf.detectors import detect as detect_drawn
 from .pdf.detectors import unextractable_text, unrendered_text
+from .pdf.history import detect as detect_earlier
 from .pdf.rendered import read_page_back
 from .revisions import detect as detect_revisions
 from .sheets import detect as detect_sheets
@@ -84,6 +85,12 @@ def collect(extraction, ocr: bool = False) -> list[Finding]:
             )
             found.extend(unrendered_text(painted, words))
             found.extend(unextractable_text(painted, words))
+
+    # Everything the current catalogue stopped pointing at. A PDF is appended
+    # to rather than rewritten, so an edit leaves what it replaced in the file.
+    if extraction.earlier:
+        shown = "\n".join(unit.text for unit in extraction.units)
+        found.extend(detect_earlier(extraction.earlier, shown))
 
     # A whole file carried inside this one. Not a hiding technique - an
     # attachment is a feature - but it is content the page does not mention,

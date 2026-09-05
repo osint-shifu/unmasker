@@ -111,8 +111,27 @@ def read_pdf(path: Path) -> Extraction:
         drawn=tuple(drawn),
         metadata=metadata,
         attachments=_attachments(reader, remarks),
+        earlier=_earlier(path, remarks),
         source=path,
     )
+
+
+def _earlier(path: Path, remarks: list[str]) -> tuple:
+    """Revisions this file held before the one it is now.
+
+    Read from the bytes rather than from the parser's view of them: what the
+    parser sees is the current catalogue, and the point of this is everything
+    the current catalogue stopped pointing at.
+    """
+    from ..pdf.history import revisions
+
+    try:
+        found, problems = revisions(path.read_bytes())
+    except OSError as exc:
+        remarks.append(f"earlier revisions could not be looked for: {exc}")
+        return ()
+    remarks.extend(problems)
+    return tuple(found)
 
 
 def _attachments(reader, remarks: list[str]) -> tuple:
