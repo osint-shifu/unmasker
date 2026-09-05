@@ -18,8 +18,10 @@ its own the first time either moves. That is worth a failing test at exactly
 the moment somebody bumps the version and not a release later.
 
 The width is fixed here rather than in the README, because `--width` is not
-something a reader would type - their terminal decides it. 76 columns is
-narrow enough to survive GitHub's code block without a horizontal scrollbar.
+something a reader would type - their terminal decides it. 74 is the widest
+that still pushes the longest specimen path onto its own line: one column more
+and the header runs the path straight into the count beside it, which on
+GitHub reads as though the count were part of the file name.
 """
 
 from __future__ import annotations
@@ -37,7 +39,7 @@ from unmasker.cli import main
 ROOT = Path(__file__).resolve().parent.parent
 README = ROOT / "README.md"
 
-WIDTH = 76
+WIDTH = 74
 
 #: How many command/output pairs the README is expected to carry. Asserted so
 #: that renaming a fence, or deleting a block, fails loudly instead of leaving

@@ -39,35 +39,36 @@ unmasker tests/specimens/pdf/libreoffice-writer-black-bars.pdf
 ```
 
 ```text
-  unmasker  tests/specimens/pdf/libreoffice-writer-black-bars.pdf 4 findings
-  ──────────────────────────────────────────────────────────────────────────
+  unmasker                                                      4 findings
+    tests/specimens/pdf/libreoffice-writer-black-bars.pdf
+  ────────────────────────────────────────────────────────────────────────
 
-  ● 22 characters under a black shape at x 117.5-268.7, y             page 1
+  ● 22 characters under a black shape at x 117.5-268.7, y           page 1
     684.2-698.5; the rest of the line still reads "Name:"
   │ human sees     ██████████████████████
   │ machine reads  Wanda Testowa-Przyklad
 
-  ● 21 characters under a black shape at x 114.8-259.3, y             page 1
+  ● 21 characters under a black shape at x 114.8-259.3, y           page 1
     664.5-678.7; the rest of the line still reads "Email:"
   │ human sees     █████████████████████
   │ machine reads  w.testowa@example.org
 
-  ● 15 characters under a black shape at x 123.1-228.1, y             page 1
+  ● 15 characters under a black shape at x 123.1-228.1, y           page 1
     644.7-658.9; the rest of the line still reads "Telephone:"
   │ human sees     ███████████████
   │ machine reads  +48 601 000 000
 
-  ● 37 characters under a black shape at x 119.0-369.1, y             page 1
+  ● 37 characters under a black shape at x 119.0-369.1, y           page 1
     624.9-639.2; the rest of the line still reads "Address:"
   │ human sees     █████████████████████████████████████
   │ machine reads  ul. Przykladowa 12/3, 00-001 Warszawa
 
-  notes                                                               1 note
-  ──────────────────────────────────────────────────────────────────────────
-    the file says it was made by Creator Writer; Producer LibreOffice 24.2,
-    and dates itself CreationDate 2026-08-31T20:25:50Z
+  notes                                                             1 note
+  ────────────────────────────────────────────────────────────────────────
+    the file says it was made by Creator Writer; Producer LibreOffice
+    24.2, and dates itself CreationDate 2026-08-31T20:25:50Z
 
-  ──────────────────────────────────────────────────────────────────────────
+  ────────────────────────────────────────────────────────────────────────
   searched 1 page of 1. 4 findings in 1 kind.
 ```
 
@@ -179,23 +180,23 @@ unmasker tests/specimens/pdf/libreoffice-writer-image-over-text.pdf
 ```
 
 ```text
-  unmasker                                                         1 finding
+  unmasker                                                       1 finding
     tests/specimens/pdf/libreoffice-writer-image-over-text.pdf
-  ──────────────────────────────────────────────────────────────────────────
+  ────────────────────────────────────────────────────────────────────────
 
-  ● 22 characters under an image at x 123.3-245.9, y 702.8-720.0; an  page 1
-    image over a text layer is also what a scan of a printed page
-    looks like, and there the two normally agree; the rest of the
-    line still reads "Subject:"
+  ● 22 characters under an image at x 123.3-245.9, y 702.8-720.0;   page 1
+    an image over a text layer is also what a scan of a printed
+    page looks like, and there the two normally agree; the rest of
+    the line still reads "Subject:"
   │ human sees     ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒
   │ machine reads  Ludmila Wieczorek-Test
 
-  notes                                                               1 note
-  ──────────────────────────────────────────────────────────────────────────
-    the file says it was made by Creator Writer; Producer LibreOffice 24.2,
-    and dates itself CreationDate 2026-08-31T23:50:46Z
+  notes                                                             1 note
+  ────────────────────────────────────────────────────────────────────────
+    the file says it was made by Creator Writer; Producer LibreOffice
+    24.2, and dates itself CreationDate 2026-08-31T23:50:46Z
 
-  ──────────────────────────────────────────────────────────────────────────
+  ────────────────────────────────────────────────────────────────────────
   searched 1 page of 1. 1 finding in 1 kind.
 ```
 
@@ -209,67 +210,69 @@ unmasker tests/specimens/xlsx/libreoffice-calc-hidden-columns.xlsx
 ```
 
 ```text
-  unmasker                                                        7 findings
+  unmasker                                                      7 findings
     tests/specimens/xlsx/libreoffice-calc-hidden-columns.xlsx
-  ──────────────────────────────────────────────────────────────────────────
+  ────────────────────────────────────────────────────────────────────────
 
-  comment                                                          1 finding
-  ──────────────────────────────────────────────────────────────────────────
-  ● a comment by Halina Probna-Test, at a time the file does not  whole file
-    state, carried in the file and not part of the document body
+  comment                                                        1 finding
+  ────────────────────────────────────────────────────────────────────────
+  ● a comment by Halina Probna-Test, at a time the file does    whole file
+    not state, carried in the file and not part of the
+    document body
   │ human sees     nothing on the page
-  │ machine reads  Panel agreed the reserve before the bids were opened. Not
-  │                for the file we release.
+  │ machine reads  Panel agreed the reserve before the bids were opened.
+  │                Not for the file we release.
 
-  revision-history                                                 1 finding
-  ──────────────────────────────────────────────────────────────────────────
-  ● the file records 1 comment, by 1 person. A name here is       whole file
-    whatever the application that wrote it was configured to say
+  revision-history                                               1 finding
+  ────────────────────────────────────────────────────────────────────────
+  ● the file records 1 comment, by 1 person. A name here is     whole file
+    whatever the application that wrote it was configured to
+    say
   │ human sees     nothing on the page
   │ machine reads  Halina Probna-Test
 
-  hidden-sheet                                                     1 finding
-  ──────────────────────────────────────────────────────────────────────────
-  ● sheet "Workings" is marked hidden, and holds 1 value still    whole file
+  hidden-sheet                                                   1 finding
+  ────────────────────────────────────────────────────────────────────────
+  ● sheet "Workings" is marked hidden, and holds 1 value still  whole file
     in the file
   │ human sees     nothing on the page
   │ machine reads  Reserve set at 240,000. Kowalski came in 12% under; the
   │                others were told nothing.
 
-  hidden-rows                                                      1 finding
-  ──────────────────────────────────────────────────────────────────────────
-  ● row 4 of sheet "Evaluation" is hidden, and holds 6 values     whole file
+  hidden-rows                                                    1 finding
+  ────────────────────────────────────────────────────────────────────────
+  ● row 4 of sheet "Evaluation" is hidden, and holds 6 values   whole file
     still in the file
   │ human sees     nothing on the page
   │ machine reads  Delta Consulting sp. z o.o. | 82 | 44 | 196000 | 63 |
   │                withdrawn after the deadline - do not list
 
-  hidden-columns                                                   1 finding
-  ──────────────────────────────────────────────────────────────────────────
-  ● column D of sheet "Evaluation" is hidden, and holds 5 values  whole file
-    still in the file
+  hidden-columns                                                 1 finding
+  ────────────────────────────────────────────────────────────────────────
+  ● column D of sheet "Evaluation" is hidden, and holds 5       whole file
+    values still in the file
   │ human sees     nothing on the page
   │ machine reads  Reserve price (EUR) | 211000 | 238000 | 196000 | 251000
 
-  undisclosed-metadata                                            2 findings
-  ──────────────────────────────────────────────────────────────────────────
-  ● the creator field of docProps/core.xml holds a value the      whole file
+  undisclosed-metadata                                          2 findings
+  ────────────────────────────────────────────────────────────────────────
+  ● the creator field of docProps/core.xml holds a value the    whole file
     document does not show anywhere in its text
   │ human sees     nothing on the page
   │ machine reads  Halina Probna-Test
 
-  ● the title field of docProps/core.xml holds a value the        whole file
+  ● the title field of docProps/core.xml holds a value the      whole file
     document does not show anywhere in its text
   │ human sees     nothing on the page
   │ machine reads  Tender evaluation - panel copy
 
-  notes                                                               1 note
-  ──────────────────────────────────────────────────────────────────────────
+  notes                                                             1 note
+  ────────────────────────────────────────────────────────────────────────
     the file says it was made by Application
     LibreOffice/24.2.7.2$Linux_X86_64 LibreOffice_project/420$Build-2;
     AppVersion 15.0000, and counts revision 0; TotalTime 0
 
-  ──────────────────────────────────────────────────────────────────────────
+  ────────────────────────────────────────────────────────────────────────
   searched the text of this file. 7 findings in 6 kinds.
 ```
 
@@ -280,13 +283,13 @@ unmasker tests/specimens/docx
 ```
 
 ```text
-  unmasker  tests/specimens/docx                                3 of 6 files
-  ──────────────────────────────────────────────────────────────────────────
+  unmasker  tests/specimens/docx                              3 of 6 files
+  ────────────────────────────────────────────────────────────────────────
     read      6 files, 15 findings
     not read  0 files
 
-  what was found                                                     9 kinds
-  ──────────────────────────────────────────────────────────────────────────
+  what was found                                                   9 kinds
+  ────────────────────────────────────────────────────────────────────────
     zero-width            1 file
     bidi-control          1 file
     tag-characters        1 file
@@ -297,16 +300,17 @@ unmasker tests/specimens/docx
     comment               1 file
     revision-history      1 file
 
-  files that hide something                                          3 files
-  ──────────────────────────────────────────────────────────────────────────
+  files that hide something                                        3 files
+  ────────────────────────────────────────────────────────────────────────
     libreoffice-writer-hidden-characters.docx  zero-width, bidi-control,
-                                               tag-characters, mixed-script
+                                               tag-characters,
+                                               mixed-script
     libreoffice-writer-metadata-leak.docx      undisclosed-metadata,
                                                metadata-path
     libreoffice-writer-tracked-changes.docx    deleted-text, comment,
                                                revision-history
 
-  ──────────────────────────────────────────────────────────────────────────
+  ────────────────────────────────────────────────────────────────────────
   searched 6 files. unmasker <file> for the detail, --json for all of it.
 ```
 
